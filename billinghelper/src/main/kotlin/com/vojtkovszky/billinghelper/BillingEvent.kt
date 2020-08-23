@@ -81,5 +81,41 @@ enum class BillingEvent {
     /**
      * User cancelled [BillingClient.launchPriceChangeConfirmationFlow]
      */
-    PRICE_CHANGE_CONFIRMATION_CANCELLED,
+    PRICE_CHANGE_CONFIRMATION_CANCELLED;
+
+
+    /**
+     * Is event a failure by nature.
+     */
+    val isFailure: Boolean
+        get() = listOf(
+            BILLING_CONNECTION_FAILED, QUERY_SKU_DETAILS_FAILED, QUERY_OWNED_PURCHASES_FAILED,
+            PURCHASE_FAILED, CONSUME_PURCHASE_FAILED
+        ).contains(this)
+
+    /**
+     * Is event a failure due to an actively initialized flow.
+     */
+    val isActiveActionFailure: Boolean
+        get() = listOf(
+            QUERY_SKU_DETAILS_FAILED, PURCHASE_FAILED, CONSUME_PURCHASE_FAILED
+        ).contains(this)
+
+    /**
+     * Is event a success by nature.
+     */
+    val isSuccess: Boolean
+        get() = listOf(
+            BILLING_CONNECTED, QUERY_SKU_DETAILS_COMPLETE, QUERY_OWNED_PURCHASES_COMPLETE,
+            PURCHASE_COMPLETE, PURCHASE_ACKNOWLEDGED, CONSUME_PURCHASE_SUCCESS,
+            PRICE_CHANGE_CONFIRMATION_SUCCESS
+        ).contains(this)
+
+    /**
+     * Is event a success due to an actively initialized flow.
+     */
+    val isActiveActionSuccess: Boolean
+        get() = listOf(
+            PURCHASE_COMPLETE, PRICE_CHANGE_CONFIRMATION_SUCCESS
+        ).contains(this)
 }
