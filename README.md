@@ -82,18 +82,18 @@ enum class BillingEvent {
 ```
 
 ## Great! How do I get started?
-Make sure your root build.gradle repositories inlude JitPack:
+Make sure root build.gradle repositories include JitPack
 ``` gradle
 allprojects {
-  repositories {
-    maven { url 'https://jitpack.io' }
-  }
+    repositories {
+        maven { url 'https://jitpack.io' }
+    }
 }
 ```
 
-And dependency to your app build.gradle
+And BillingHelper dependency is added to app build.gradle
 ``` gradle
 dependencies {
-  implementation "com.github.mvojtkovszky:BillingHelper:$latest_version"
+    implementation "com.github.mvojtkovszky:BillingHelper:$latest_version"
 }
 ```
