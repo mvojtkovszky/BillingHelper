@@ -19,8 +19,8 @@ android {
     defaultConfig {
         minSdkVersion 16
         targetSdkVersion 30
-        versionCode 1
-        versionName "1.0.0"
+        versionCode 2
+        versionName "1.0.1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -30,7 +30,17 @@ android {
     }
 }
 
-// handle local publishing
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    implementation 'androidx.core:core-ktx:1.3.1' /* https://developer.android.com/jetpack/androidx/releases/core */
+    api 'com.android.billingclient:billing-ktx:3.0.0' /* https://developer.android.com/google/play/billing/billing_library_overview */
+
+    testImplementation 'junit:junit:4.13'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
+}
+
+// handle publishing
 project.afterEvaluate {
     publishing {
         publications {
@@ -39,18 +49,29 @@ project.afterEvaluate {
                 artifactId = 'BillingHelper'
                 version = android.defaultConfig.versionName
                 artifact bundleDebugAar
+                // make sure pom has all dependencies
+                pom.withXml {
+                    def dependenciesNode = asNode().appendNode('dependencies')
+                    configurations.api.allDependencies
+                            .findAll { dependency -> dependency.name != "unspecified" }
+                            .each { dependency ->
+                                addDependency(dependenciesNode.appendNode('dependency'), dependency, "compile")
+                            }
+                    configurations.implementation.allDependencies
+                            .findAll { dependency -> !configurations.api.allDependencies.contains(dependency) }
+                            .findAll { dependency -> dependency.name != "unspecified" }
+                            .each { dependency ->
+                                addDependency(dependenciesNode.appendNode('dependency'), dependency, "runtime")
+                            }
+                }
             }
         }
     }
 }
 
-dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    implementation 'androidx.core:core-ktx:1.3.1'
-    implementation 'com.android.billingclient:billing-ktx:3.0.0' /* https://developer.android.com/google/play/billing/billing_library_overview */
-
-    testImplementation 'junit:junit:4.13'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
-
+static def addDependency(dependencyNode, dependency, scope) {
+    dependencyNode.appendNode('groupId', dependency.group)
+    dependencyNode.appendNode('artifactId', dependency.name)
+    dependencyNode.appendNode('version', dependency.version)
+    dependencyNode.appendNode('scope', scope)
 }
