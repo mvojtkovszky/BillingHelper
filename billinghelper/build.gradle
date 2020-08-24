@@ -19,8 +19,8 @@ android {
     defaultConfig {
         minSdkVersion 16
         targetSdkVersion 30
-        versionCode 2
-        versionName "1.0.1"
+        versionCode 3
+        versionName "1.0.2"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -33,7 +33,7 @@ android {
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     implementation 'androidx.core:core-ktx:1.3.1' /* https://developer.android.com/jetpack/androidx/releases/core */
-    implementation 'com.android.billingclient:billing-ktx:3.0.0' /* https://developer.android.com/google/play/billing/billing_library_overview */
+    api 'com.android.billingclient:billing-ktx:3.0.0' /* https://developer.android.com/google/play/billing/billing_library_overview */
 
     testImplementation 'junit:junit:4.13'
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'
