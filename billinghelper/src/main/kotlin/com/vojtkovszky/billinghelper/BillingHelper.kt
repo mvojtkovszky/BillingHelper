@@ -4,15 +4,15 @@ import android.app.Activity
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
-import androidx.annotation.UiThread
 import com.android.billingclient.api.*
 
+@Suppress("unused")
 class BillingHelper(
         context: Context,
         private val skuNames: List<String>,
         queryForSkuDetailsOnInit: Boolean = true,
         queryForOwnedPurchasesOnInit: Boolean = true,
-        @UiThread billingListener: BillingListener? = null
+        billingListener: BillingListener? = null
 ) {
 
     // billing client
@@ -24,7 +24,7 @@ class BillingHelper(
             field = value
         }
     // represents details of all available sku details
-    private var skuDetailsList = emptyList<SkuDetails>()
+    private val skuDetailsList = mutableListOf<SkuDetails>()
     // callback listeners
     private val billingListeners = mutableListOf<BillingListener>()
 
@@ -40,7 +40,7 @@ class BillingHelper(
                         this.purchases = purchases
                         // send callback complete
                         invokeListener(BillingEvent.PURCHASE_COMPLETE, billingResult.debugMessage)
-                    } else if (!billingResult.isResponseUserCancelled()) {
+                    } else if (billingResult.isResponseUserCancelled()) {
                         // send callback user cancelled
                         invokeListener(BillingEvent.PURCHASE_CANCELLED, billingResult.debugMessage)
                     } else {
@@ -57,6 +57,7 @@ class BillingHelper(
                         event = if (billingResult.isResponseOk())
                             BillingEvent.BILLING_CONNECTED else BillingEvent.BILLING_CONNECTION_FAILED,
                         message = billingResult.debugMessage)
+                // make queries on start
                 if (billingResult.isResponseOk()) {
                     // query for sku details
                     if (queryForSkuDetailsOnInit) {
@@ -102,9 +103,20 @@ class BillingHelper(
 
     /**
      * will return a single [SkuDetails] object.
+     * Note that you need to query for owned purchases first using [initQuerySkuDetails] or in
+     * some cases complete a purchase in order for this to be not null
+     */
+    @SuppressWarnings("WeakerAccess")
+    fun getPurchaseForSkuName(skuName: String): Purchase? {
+        return purchases.find { purchase -> purchase.sku == skuName }
+    }
+
+    /**
+     * will return a single [SkuDetails] object.
      * Note that you need to query for details first using [initQueryOwnedPurchases] in order to
      * get a result.
      */
+    @SuppressWarnings("WeakerAccess")
     fun getSkuDetails(skuName: String): SkuDetails? {
         return skuDetailsList.find { skuDetail -> skuDetail.sku == skuName }
     }
@@ -125,15 +137,23 @@ class BillingHelper(
     }
 
     /**
-     * Will start a purchase flow for given sku name. Result will get back to
-     * [PurchasesUpdatedListener]
+     * Will start a purchase flow for given sku name.
+     * Result will get back to [PurchasesUpdatedListener]
      */
-    fun launchPurchaseFlow(activity: Activity, skuName: String) {
+    fun launchPurchaseFlow(activity: Activity,
+                           skuName: String,
+                           obfuscatedAccountId: String? = null,
+                           obfuscatedProfileId: String? = null,
+                           setVrPurchaseFlow: Boolean = false
+    ) {
         val skuDetailsToPurchase = getSkuDetails(skuName)
         if (billingClient.isReady && skuDetailsToPurchase != null) {
-            val flowParams = BillingFlowParams.newBuilder()
-                    .setSkuDetails(skuDetailsToPurchase)
-                    .build()
+            val flowParams = BillingFlowParams.newBuilder().apply {
+                setSkuDetails(skuDetailsToPurchase)
+                obfuscatedAccountId?.let { setObfuscatedAccountId(it) }
+                obfuscatedProfileId?.let { setObfuscatedProfileId(it) }
+                setVrPurchaseFlow(setVrPurchaseFlow)
+            }.build()
             // launch flow. Result will be passed to PurchasesUpdatedListener
             billingClient.launchBillingFlow(activity, flowParams)
         } else {
@@ -160,18 +180,9 @@ class BillingHelper(
     }
 
     /**
-     * will return a single [SkuDetails] object.
-     * Note that you need to query for owned purchases first using [initQueryForSkuDetails] or
-     * some cases complete a purchase in order for this to be not null
-     */
-    fun getPurchaseForSkuName(skuName: String): Purchase? {
-        return purchases.find { purchase -> purchase.sku == skuName }
-    }
-
-    /**
      * Initialize query for all currently owned items bought within your app.
      * Will query for both in-app purchases and subscriptions.
-     * Result will be returned using [billingListener] after [purchases] is updated.
+     * Result will be returned using [billingListeners] after [purchases] is updated.
      */
     fun initQueryOwnedPurchases() {
         val ownedPurchases = mutableListOf<Purchase>()
@@ -193,7 +204,7 @@ class BillingHelper(
     /**
      * Initialize query for [SkuDetails] listed for this app.
      * Will query for both in-app purchases and subscriptions.
-     * Result will be returned using [billingListener]
+     * Result will be returned using [billingListeners]
      */
     fun initQuerySkuDetails() {
         // temp list to be assembled through queries
@@ -218,7 +229,8 @@ class BillingHelper(
                 }
                 // all queries were completed successfully, safe to update the list and trigger listener
                 if (successfulTypeQueries == purchaseTypesToQuery.size) {
-                    this.skuDetailsList = querySkuDetailsList
+                    this.skuDetailsList.clear()
+                    this.skuDetailsList.addAll(querySkuDetailsList)
                     invokeListener(BillingEvent.QUERY_SKU_DETAILS_COMPLETE)
                 }
             }
@@ -250,7 +262,7 @@ class BillingHelper(
     /**
      * Add a listener to [billingListeners]
      */
-    fun addBillingListener(@UiThread listener: BillingListener) {
+    fun addBillingListener(listener: BillingListener) {
         if (!billingListeners.contains(listener)) billingListeners.add(listener)
     }
 
@@ -266,8 +278,12 @@ class BillingHelper(
      */
     private fun invokeListener(event: BillingEvent, message: String? = null) {
         Handler(Looper.getMainLooper()).post {
-            for (billingListener in billingListeners) {
-                billingListener.onBillingEvent(event, message)
+            try {
+                for (billingListener in billingListeners) {
+                    billingListener.onBillingEvent(event, message)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }
