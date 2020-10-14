@@ -12,11 +12,11 @@ class MainActivity: AppCompatActivity(), BillingListener {
     override fun onCreate(savedInstanceState: Bundle?, persistentState: PersistableBundle?) {
         super.onCreate(savedInstanceState, persistentState)
 
-        // construct helper, throw in context, supported skus (for query puproses)
-        // and a callback listener
+        // construct helper, by default, connection will be initialized immediately with sku details and
+        // owned purchases queried. All events are reported via billingListener.
         billing = BillingHelper(
                 context = this, 
-                skuNames = listOf("inAppPurchaseSkuName1", "inAppPurchaseSkuName2", "subscriptionSkuName")
+                skuNames = listOf("inAppPurchaseSkuName1", "inAppPurchaseSkuName2", "subscriptionSkuName"),
                 billingListener = this)
     }
 
@@ -38,6 +38,8 @@ fun consumePurchase(purchase: Purchase)
 
 fun endBillingClientConnection()
 
+fun getPurchaseForSkuName(skuName: String): Purchase?
+
 fun getSkuDetails(skuName: String): SkuDetails?
 
 fun isBillingReady(): Boolean
@@ -48,13 +50,13 @@ fun launchPurchaseFlow(activity: Activity, skuName: String)
 
 fun launchPriceChangeConfirmationFlow(activity: Activity, skuDetails: SkuDetails)
 
-fun getPurchaseForSkuName(skuName: String): Purchase?
+fun initClientConnection(queryForSkuDetailsOnConnected: Boolean,queryForOwnedPurchasesOnConected: Boolean)
 
-fun initQueryOwnedPurchases() // by default handled automatically 
+fun initQueryOwnedPurchases()
 
-fun initQuerySkuDetails() // by default handled automatically 
+fun initQuerySkuDetails()
 
-fun addBillingListener(@UiThread listener: BillingListener)
+fun addBillingListener(listener: BillingListener)
 
 fun removeBillingListener(listener: BillingListener)
 ```
