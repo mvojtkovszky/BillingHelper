@@ -2,7 +2,14 @@ package com.vojtkovszky.billinghelper
 
 import com.android.billingclient.api.BillingClient
 
+/**
+ * Representing an event from [BillingHelper].
+ * Whenever a supported change of any kind happens and someone is listening for it using
+ * [BillingListener], an event will always be passed.
+ */
+@Suppress("unused")
 enum class BillingEvent {
+    // region event types
     /**
      * Success when calling [BillingClient.startConnection]
      */
@@ -82,8 +89,9 @@ enum class BillingEvent {
      * User cancelled [BillingClient.launchPriceChangeConfirmationFlow]
      */
     PRICE_CHANGE_CONFIRMATION_CANCELLED;
+    // endregion event types
 
-
+    // region helpers
     /**
      * Is event a failure by nature.
      */
@@ -118,4 +126,14 @@ enum class BillingEvent {
         get() = listOf(
             PURCHASE_COMPLETE, PRICE_CHANGE_CONFIRMATION_SUCCESS
         ).contains(this)
+
+    /**
+     * Indicating owned purchases information changed. Either a new purchase is complete
+     * or we queried for owned purchases.
+     */
+    val isOwnedPurchasesChange: Boolean
+        get() = listOf(
+            PURCHASE_COMPLETE, QUERY_OWNED_PURCHASES_COMPLETE
+        ).contains(this)
+    // endregion helpers
 }
