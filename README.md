@@ -23,7 +23,7 @@ class MainActivity: AppCompatActivity(), BillingListener {
     override fun onDestroy() {
         super.onDestroy()
         // make sure to clean it up when you're done
-        billing.endBillingClientConnection()
+        billing.endClientConnection()
     }
 
     override fun onBillingEvent(event: BillingEvent, message: String?) {
@@ -36,7 +36,7 @@ class MainActivity: AppCompatActivity(), BillingListener {
 ``` kotlin
 fun consumePurchase(purchase: Purchase)
 
-fun endBillingClientConnection()
+fun endClientConnection()
 
 fun getPurchaseForSkuName(skuName: String): Purchase?
 
