@@ -97,7 +97,7 @@ class BillingHelper(
      * Important to call this when done with billing.
      * Will clear all the [billingListeners] call [BillingClient.endConnection]
      */
-    fun endBillingClientConnection() {
+    fun endClientConnection() {
         billingListeners.clear()
         billingClient.endConnection()
     }
