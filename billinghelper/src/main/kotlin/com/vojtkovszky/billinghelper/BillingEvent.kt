@@ -102,7 +102,8 @@ enum class BillingEvent {
         ).contains(this)
 
     /**
-     * Is event a failure due to an actively initialized flow.
+     * Is event a failure due to an actively initialized flow. One of:
+     * [QUERY_SKU_DETAILS_FAILED], [QUERY_SKU_DETAILS_FAILED], [CONSUME_PURCHASE_FAILED]
      */
     val isActiveActionFailure: Boolean
         get() = listOf(
@@ -120,7 +121,8 @@ enum class BillingEvent {
         ).contains(this)
 
     /**
-     * Is event a success due to an actively initialized flow.
+     * Is event a success due to an actively initialized flow. One of:
+     * [PURCHASE_COMPLETE], [PRICE_CHANGE_CONFIRMATION_SUCCESS]
      */
     val isActiveActionSuccess: Boolean
         get() = listOf(
@@ -128,8 +130,8 @@ enum class BillingEvent {
         ).contains(this)
 
     /**
-     * Indicating owned purchases information changed. Either a new purchase is complete
-     * or we queried for owned purchases.
+     * Indicating owned purchases information changed.
+     * Happens by either [PURCHASE_COMPLETE] or [QUERY_OWNED_PURCHASES_COMPLETE]
      */
     val isOwnedPurchasesChange: Boolean
         get() = listOf(

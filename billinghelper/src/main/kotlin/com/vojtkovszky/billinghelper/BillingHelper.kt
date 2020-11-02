@@ -48,6 +48,25 @@ class BillingHelper(
     // callback listeners
     private val billingListeners = mutableListOf<BillingListener>()
 
+    // keep track if we've actually queried purchases and sku details
+    /**
+     * Determine if billingClient is ready. Based on [BillingClient.isReady]
+     */
+    val billingReady: Boolean
+        get() = billingClient.isReady
+
+    /**
+     * Determine if owned purchases have been successfully queried yet.
+     */
+    var purchasesQueried = false
+        private set
+
+    /**
+     * Determine if sku details have been successfully queried yet.
+     */
+    var skuDetailsQueried = false
+        private set
+
     init {
         // add default listener, if present
         billingListener?.let { billingListeners.add(it) }
@@ -123,18 +142,21 @@ class BillingHelper(
     }
 
     /**
-     * Determine if billingClient is ready.
-     * Based on [BillingClient.isReady]
+     * Determine whether product with given name has state set as purchased
      */
-    fun isBillingReady(): Boolean {
-        return billingClient.isReady
+    @SuppressWarnings("WeakerAccess")
+    fun isPurchased(skuName: String): Boolean {
+        return (getPurchaseForSkuName(skuName)?.isPurchased() == true)
     }
 
     /**
-     * Determine whether product with given name has state set as purchased
+     * Determine if at least one product among given names has state set as purchased
      */
-    fun isPurchased(skuName: String): Boolean {
-        return (getPurchaseForSkuName(skuName)?.isPurchased() == true)
+    fun isPurchasedAnyOf(vararg skuNames: String): Boolean {
+        for (skuName in skuNames) {
+            if (isPurchased(skuName)) return true
+        }
+        return false
     }
 
     /**
@@ -238,6 +260,7 @@ class BillingHelper(
         for (purchaseType in ALL_PURCHASE_TYPES) {
                 billingClient.queryPurchases(purchaseType).let {
                 if (it.billingResult.isResponseOk()) {
+                    purchasesQueried = true
                     it.purchasesList?.let { purchasesList -> ownedPurchases.addAll(purchasesList) }
                 } else {
                     invokeListener(
@@ -284,6 +307,7 @@ class BillingHelper(
                 if (successfulTypeQueries == ALL_PURCHASE_TYPES.size) {
                     this.skuDetailsList.clear()
                     this.skuDetailsList.addAll(querySkuDetailsList)
+                    this.skuDetailsQueried = true
                     invokeListener(BillingEvent.QUERY_SKU_DETAILS_COMPLETE, queryResult.debugMessage, queryResult.responseCode)
                 }
             }
