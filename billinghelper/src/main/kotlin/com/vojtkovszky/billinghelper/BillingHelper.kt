@@ -258,7 +258,7 @@ class BillingHelper(
     fun initQueryOwnedPurchases() {
         val ownedPurchases = mutableListOf<Purchase>()
         for (purchaseType in ALL_PURCHASE_TYPES) {
-                billingClient.queryPurchases(purchaseType).let {
+            billingClient.queryPurchases(purchaseType).let {
                 if (it.billingResult.isResponseOk()) {
                     purchasesQueried = true
                     it.purchasesList?.let { purchasesList -> ownedPurchases.addAll(purchasesList) }
