@@ -32,7 +32,7 @@ class BillingHelper(
         billingListener: BillingListener? = null
 ) {
     companion object {
-        val ALL_PURCHASE_TYPES = arrayOf(BillingClient.SkuType.INAPP, BillingClient.SkuType.SUBS)
+        private val ALL_PURCHASE_TYPES = arrayOf(BillingClient.SkuType.INAPP, BillingClient.SkuType.SUBS)
     }
 
     // billing client
