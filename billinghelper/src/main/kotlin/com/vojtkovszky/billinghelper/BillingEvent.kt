@@ -36,12 +36,12 @@ enum class BillingEvent {
     QUERY_SKU_DETAILS_FAILED,
 
     /**
-     * Success from [BillingClient.queryPurchases]
+     * Success from [BillingClient.queryPurchasesAsync]
      */
     QUERY_OWNED_PURCHASES_COMPLETE,
 
     /**
-     * Failure from [BillingClient.queryPurchases]
+     * Failure from [BillingClient.queryPurchasesAsync]
      */
     QUERY_OWNED_PURCHASES_FAILED,
 
@@ -63,7 +63,7 @@ enum class BillingEvent {
     /**
      * Success from [BillingClient.acknowledgePurchase]
      */
-    PURCHASE_ACKNOWLEDGED,
+    PURCHASE_ACKNOWLEDGE_SUCCESS,
 
     /**
      * Failure from [BillingClient.acknowledgePurchase]
@@ -88,7 +88,12 @@ enum class BillingEvent {
     /**
      * User cancelled [BillingClient.launchPriceChangeConfirmationFlow]
      */
-    PRICE_CHANGE_CONFIRMATION_CANCELLED;
+    PRICE_CHANGE_CONFIRMATION_CANCELLED,
+
+    /**
+     * Failure from [BillingClient.launchPriceChangeConfirmationFlow]
+     */
+    PRICE_CHANGE_CONFIRMATION_FAILED;
     // endregion event types
 
     // region helpers
@@ -98,16 +103,18 @@ enum class BillingEvent {
     val isFailure: Boolean
         get() = listOf(
             BILLING_CONNECTION_FAILED, QUERY_SKU_DETAILS_FAILED, QUERY_OWNED_PURCHASES_FAILED,
-            PURCHASE_FAILED, CONSUME_PURCHASE_FAILED
+            PURCHASE_FAILED, CONSUME_PURCHASE_FAILED, PRICE_CHANGE_CONFIRMATION_FAILED
         ).contains(this)
 
     /**
      * Is event a failure due to an actively initialized flow. One of:
-     * [QUERY_SKU_DETAILS_FAILED], [QUERY_SKU_DETAILS_FAILED], [CONSUME_PURCHASE_FAILED]
+     * [QUERY_SKU_DETAILS_FAILED], [QUERY_SKU_DETAILS_FAILED], [CONSUME_PURCHASE_FAILED],
+     * [PRICE_CHANGE_CONFIRMATION_FAILED]
      */
     val isActiveActionFailure: Boolean
         get() = listOf(
-            QUERY_SKU_DETAILS_FAILED, PURCHASE_FAILED, CONSUME_PURCHASE_FAILED
+            QUERY_SKU_DETAILS_FAILED, PURCHASE_FAILED, CONSUME_PURCHASE_FAILED,
+            PRICE_CHANGE_CONFIRMATION_FAILED
         ).contains(this)
 
     /**
@@ -116,7 +123,7 @@ enum class BillingEvent {
     val isSuccess: Boolean
         get() = listOf(
             BILLING_CONNECTED, QUERY_SKU_DETAILS_COMPLETE, QUERY_OWNED_PURCHASES_COMPLETE,
-            PURCHASE_COMPLETE, PURCHASE_ACKNOWLEDGED, CONSUME_PURCHASE_SUCCESS,
+            PURCHASE_COMPLETE, PURCHASE_ACKNOWLEDGE_SUCCESS, CONSUME_PURCHASE_SUCCESS,
             PRICE_CHANGE_CONFIRMATION_SUCCESS
         ).contains(this)
 
