@@ -13,14 +13,18 @@ import com.android.billingclient.api.*
  * manually.
  *
  * @param context required to build [BillingClient].
- * @param skuNames list of sku names supported by the app.
- * @param startConnectionImmediately set whether [initClientConnection] should be called right after
- * client is constructed.
- * @param querySkuDetailsOnConnected set whether [initQuerySkuDetails] should be called right after
- * client connects. Note this parameter will be ignored if startConnectionImmediately is set to false.
- * @param queryOwnedPurchasesOnConnected set whether [initQueryOwnedPurchases] should be called right
- * after client connects. Note this parameter will be ignored if startConnectionImmediately is set to false.
- * @param billingListener default listener that'll be added by calling [addBillingListener].
+ * @param skuNames list of sku names supported by the app. Both in app purchases and subscriptions.
+ * @param startConnectionImmediately set whether [initClientConnection] should be called automatically
+ * right after client is constructed.
+ * @param querySkuDetailsOnConnected set whether [initQuerySkuDetails] should be called automatically
+ * right after client connects.
+ * Note this parameter will be ignored if startConnectionImmediately is set to false as we cannot
+ * query for sku details without billing client being connected.
+ * @param queryOwnedPurchasesOnConnected set whether [initQueryOwnedPurchases] should be called automatically
+ * right after client connects.
+ * Note this parameter will be ignored if startConnectionImmediately is set to false as we cannot
+ * query for owned purchases without billing client being connected.
+ * @param billingListener default listener that'll be added as [addBillingListener].
  */
 @Suppress("unused")
 class BillingHelper(
@@ -63,6 +67,7 @@ class BillingHelper(
 
     /**
      * Determine if owned purchases have been successfully queried yet.
+     * That happens with successful completion of [initQueryOwnedPurchases].
      */
     @SuppressWarnings("WeakerAccess")
     var purchasesQueried = false
@@ -70,6 +75,7 @@ class BillingHelper(
 
     /**
      * Determine if sku details have been successfully queried yet.
+     * That happens with successful completion of [initQuerySkuDetails].
      */
     @SuppressWarnings("WeakerAccess")
     var skuDetailsQueried = false
@@ -132,23 +138,24 @@ class BillingHelper(
     }
 
     /**
-     * will return a single [SkuDetails] object.
-     * Note that you need to query for owned purchases first using [initQuerySkuDetails] or in
-     * some cases complete a purchase in order for this to be not null
+     * Will return a single [Purchase] object that contains a given [skuName] or null
+     * if no match found.
+     * Note that you need to query for owned purchases using [initQuerySkuDetails] or complete a
+     * purchase before, in order for this to be not null.
      */
     @SuppressWarnings("WeakerAccess")
-    fun getPurchaseForSkuName(skuName: String): Purchase? {
-        return purchases.find { it.skus.find { sku -> sku == skuName } == skuName }
+    fun getPurchaseWithSkuName(skuName: String): Purchase? {
+        return purchases.find { it.skus.contains(skuName) }
     }
 
     /**
-     * will return a single [SkuDetails] object.
-     * Note that you need to query for details first using [initQueryOwnedPurchases] in order to
-     * get a result.
+     * Will return a single [SkuDetails] object with a given [skuName] or null if no match found.
+     * Note that you need to query for sku details first using [initQueryOwnedPurchases] in order
+     * for this not to be null.
      */
     @SuppressWarnings("WeakerAccess")
     fun getSkuDetails(skuName: String): SkuDetails? {
-        return skuDetailsList.find { skuDetail -> skuDetail.sku == skuName }
+        return skuDetailsList.find { it.sku == skuName }
     }
 
     /**
@@ -156,7 +163,7 @@ class BillingHelper(
      */
     @SuppressWarnings("WeakerAccess")
     fun isPurchased(skuName: String): Boolean {
-        return (getPurchaseForSkuName(skuName)?.isPurchased() == true)
+        return getPurchaseWithSkuName(skuName)?.isPurchased() == true
     }
 
     /**
@@ -378,7 +385,7 @@ class BillingHelper(
 
     // region billing listener
     /**
-     * Add a listener to [billingListeners]
+     * Add a listener to [billingListeners] if not already present
      */
     @SuppressWarnings("WeakerAccess")
     fun addBillingListener(listener: BillingListener) {
@@ -398,8 +405,8 @@ class BillingHelper(
     private fun invokeListener(event: BillingEvent, message: String? = null, responseCode: Int? = null) {
         Handler(Looper.getMainLooper()).post {
             try {
-                for (billingListener in billingListeners) {
-                    billingListener.onBillingEvent(event, message, responseCode)
+                billingListeners.forEach {
+                    it.onBillingEvent(event, message, responseCode)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
