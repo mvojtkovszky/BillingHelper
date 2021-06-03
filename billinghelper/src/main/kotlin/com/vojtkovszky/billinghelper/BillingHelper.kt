@@ -26,7 +26,7 @@ import com.android.billingclient.api.*
  * query for owned purchases without billing client being connected.
  * @param billingListener default listener that'll be added as [addBillingListener].
  */
-@Suppress("unused")
+@Suppress("MemberVisibilityCanBePrivate", "unused")
 class BillingHelper(
         context: Context,
         private val skuNames: List<String>,
@@ -69,7 +69,6 @@ class BillingHelper(
      * Determine if owned purchases have been successfully queried yet.
      * That happens with successful completion of [initQueryOwnedPurchases].
      */
-    @SuppressWarnings("WeakerAccess")
     var purchasesQueried = false
         private set
 
@@ -77,7 +76,6 @@ class BillingHelper(
      * Determine if sku details have been successfully queried yet.
      * That happens with successful completion of [initQuerySkuDetails].
      */
-    @SuppressWarnings("WeakerAccess")
     var skuDetailsQueried = false
         private set
 
@@ -143,7 +141,6 @@ class BillingHelper(
      * Note that you need to query for owned purchases using [initQuerySkuDetails] or complete a
      * purchase before, in order for this to be not null.
      */
-    @SuppressWarnings("WeakerAccess")
     fun getPurchaseWithSkuName(skuName: String): Purchase? {
         return purchases.find { it.skus.contains(skuName) }
     }
@@ -153,7 +150,6 @@ class BillingHelper(
      * Note that you need to query for sku details first using [initQueryOwnedPurchases] in order
      * for this not to be null.
      */
-    @SuppressWarnings("WeakerAccess")
     fun getSkuDetails(skuName: String): SkuDetails? {
         return skuDetailsList.find { it.sku == skuName }
     }
@@ -161,7 +157,6 @@ class BillingHelper(
     /**
      * Determine whether product with given name has state set as purchased
      */
-    @SuppressWarnings("WeakerAccess")
     fun isPurchased(skuName: String): Boolean {
         return getPurchaseWithSkuName(skuName)?.isPurchased() == true
     }
@@ -387,7 +382,6 @@ class BillingHelper(
     /**
      * Add a listener to [billingListeners] if not already present
      */
-    @SuppressWarnings("WeakerAccess")
     fun addBillingListener(listener: BillingListener) {
         if (!billingListeners.contains(listener)) billingListeners.add(listener)
     }
