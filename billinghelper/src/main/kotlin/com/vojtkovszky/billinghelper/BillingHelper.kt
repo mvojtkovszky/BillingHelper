@@ -227,7 +227,6 @@ class BillingHelper(
      * @param queryOwnedPurchasesOnConnected set whether [initQueryOwnedPurchases] should be
      * called right after client connects.
      */
-    @SuppressWarnings("WeakerAccess")
     fun initClientConnection(querySkuDetailsOnConnected: Boolean = false,
                              queryOwnedPurchasesOnConnected: Boolean = false) {
         if (billingClient.isReady) {
