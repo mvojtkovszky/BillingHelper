@@ -36,12 +36,12 @@ enum class BillingEvent {
     QUERY_SKU_DETAILS_FAILED,
 
     /**
-     * Success from [BillingClient.queryPurchases]
+     * Success from [BillingClient.queryPurchasesAsync]
      */
     QUERY_OWNED_PURCHASES_COMPLETE,
 
     /**
-     * Failure from [BillingClient.queryPurchases]
+     * Failure from [BillingClient.queryPurchasesAsync]
      */
     QUERY_OWNED_PURCHASES_FAILED,
 
@@ -63,7 +63,7 @@ enum class BillingEvent {
     /**
      * Success from [BillingClient.acknowledgePurchase]
      */
-    PURCHASE_ACKNOWLEDGED,
+    PURCHASE_ACKNOWLEDGE_SUCCESS,
 
     /**
      * Failure from [BillingClient.acknowledgePurchase]
@@ -88,7 +88,12 @@ enum class BillingEvent {
     /**
      * User cancelled [BillingClient.launchPriceChangeConfirmationFlow]
      */
-    PRICE_CHANGE_CONFIRMATION_CANCELLED;
+    PRICE_CHANGE_CONFIRMATION_CANCELLED,
+
+    /**
+     * Failure from [BillingClient.launchPriceChangeConfirmationFlow]
+     */
+    PRICE_CHANGE_CONFIRMATION_FAILED;
     // endregion event types
 
     // region helpers
@@ -98,16 +103,7 @@ enum class BillingEvent {
     val isFailure: Boolean
         get() = listOf(
             BILLING_CONNECTION_FAILED, QUERY_SKU_DETAILS_FAILED, QUERY_OWNED_PURCHASES_FAILED,
-            PURCHASE_FAILED, CONSUME_PURCHASE_FAILED
-        ).contains(this)
-
-    /**
-     * Is event a failure due to an actively initialized flow. One of:
-     * [QUERY_SKU_DETAILS_FAILED], [QUERY_SKU_DETAILS_FAILED], [CONSUME_PURCHASE_FAILED]
-     */
-    val isActiveActionFailure: Boolean
-        get() = listOf(
-            QUERY_SKU_DETAILS_FAILED, PURCHASE_FAILED, CONSUME_PURCHASE_FAILED
+            PURCHASE_FAILED, CONSUME_PURCHASE_FAILED, PRICE_CHANGE_CONFIRMATION_FAILED
         ).contains(this)
 
     /**
@@ -116,12 +112,21 @@ enum class BillingEvent {
     val isSuccess: Boolean
         get() = listOf(
             BILLING_CONNECTED, QUERY_SKU_DETAILS_COMPLETE, QUERY_OWNED_PURCHASES_COMPLETE,
-            PURCHASE_COMPLETE, PURCHASE_ACKNOWLEDGED, CONSUME_PURCHASE_SUCCESS,
+            PURCHASE_COMPLETE, PURCHASE_ACKNOWLEDGE_SUCCESS, CONSUME_PURCHASE_SUCCESS,
             PRICE_CHANGE_CONFIRMATION_SUCCESS
         ).contains(this)
 
     /**
-     * Is event a success due to an actively initialized flow. One of:
+     * Is event a failure in an actively initialized flow, usually accompanied by a dialog. One of:
+     * [PURCHASE_FAILED], [PRICE_CHANGE_CONFIRMATION_FAILED]
+     */
+    val isActiveActionFailure: Boolean
+        get() = listOf(
+            PURCHASE_FAILED, PRICE_CHANGE_CONFIRMATION_FAILED
+        ).contains(this)
+
+    /**
+     * Is event a success in an actively initialized flow, usually accompanied by a dialog. One of:
      * [PURCHASE_COMPLETE], [PRICE_CHANGE_CONFIRMATION_SUCCESS]
      */
     val isActiveActionSuccess: Boolean
@@ -130,7 +135,7 @@ enum class BillingEvent {
         ).contains(this)
 
     /**
-     * Indicating owned purchases information changed.
+     * Indicating information about owned purchases changed.
      * Happens by either [PURCHASE_COMPLETE] or [QUERY_OWNED_PURCHASES_COMPLETE]
      */
     val isOwnedPurchasesChange: Boolean
@@ -138,4 +143,63 @@ enum class BillingEvent {
             PURCHASE_COMPLETE, QUERY_OWNED_PURCHASES_COMPLETE
         ).contains(this)
     // endregion helpers
+
+    // region flow helpers
+    /**
+     * Determine if event is part of Billing connection changes events.
+     */
+    val isBillingConnectionFlow: Boolean
+        get() = listOf(
+            BILLING_CONNECTED, BILLING_CONNECTION_FAILED, BILLING_DISCONNECTED
+        ).contains(this)
+
+    /**
+     * Determine if event belongs to query sku details flow.
+     */
+    val isQuerySkuDetailsFlow: Boolean
+        get() = listOf(
+            QUERY_SKU_DETAILS_COMPLETE, QUERY_SKU_DETAILS_FAILED
+        ).contains(this)
+
+    /**
+     * Determine if event belongs to query owned purchases flow.
+     */
+    val isQueryOwnedPurchasesFlow: Boolean
+        get() = listOf(
+            QUERY_OWNED_PURCHASES_COMPLETE, QUERY_OWNED_PURCHASES_FAILED
+        ).contains(this)
+
+    /**
+     * Determine if event belongs to consume purchase flow.
+     */
+    val isConsumePurchaseFlow: Boolean
+        get() = listOf(
+            CONSUME_PURCHASE_SUCCESS, CONSUME_PURCHASE_FAILED
+        ).contains(this)
+
+    /**
+     * Determine if event belongs to a purchase flow.
+     */
+    val isPurchaseFlow: Boolean
+        get() = listOf(
+            PURCHASE_CANCELLED, PURCHASE_COMPLETE, PURCHASE_FAILED
+        ).contains(this)
+
+    /**
+     * Determine if event belongs to purchase acknowledgement flow.
+     */
+    val isPurchaseAcknowledgeFlow: Boolean
+        get() = listOf(
+            PURCHASE_ACKNOWLEDGE_SUCCESS, PURCHASE_ACKNOWLEDGE_FAILED
+        ).contains(this)
+
+    /**
+     * Determine if event belongs to price change confirmation flow.
+     */
+    val isPriceChangeConfirmationFlow: Boolean
+        get() = listOf(
+            PRICE_CHANGE_CONFIRMATION_FAILED, PRICE_CHANGE_CONFIRMATION_CANCELLED,
+            PRICE_CHANGE_CONFIRMATION_SUCCESS
+        ).contains(this)
+    // endregion flow helpers
 }

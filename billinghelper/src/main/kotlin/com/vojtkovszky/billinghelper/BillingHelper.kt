@@ -13,16 +13,20 @@ import com.android.billingclient.api.*
  * manually.
  *
  * @param context required to build [BillingClient].
- * @param skuNames list of sku names supported by the app.
- * @param startConnectionImmediately set whether [initClientConnection] should be called right after
- * client is constructed.
- * @param querySkuDetailsOnConnected set whether [initQuerySkuDetails] should be called right after
- * client connects. Note this parameter will be ignored if startConnectionImmediately is set to false.
- * @param queryOwnedPurchasesOnConnected set whether [initQueryOwnedPurchases] should be called right
- * after client connects. Note this parameter will be ignored if startConnectionImmediately is set to false.
- * @param billingListener default listener that'll be added by calling [addBillingListener].
+ * @param skuNames list of sku names supported by the app. Both in app purchases and subscriptions.
+ * @param startConnectionImmediately set whether [initClientConnection] should be called automatically
+ * right after client is constructed.
+ * @param querySkuDetailsOnConnected set whether [initQuerySkuDetails] should be called automatically
+ * right after client connects.
+ * Note this parameter will be ignored if startConnectionImmediately is set to false as we cannot
+ * query for sku details without billing client being connected.
+ * @param queryOwnedPurchasesOnConnected set whether [initQueryOwnedPurchases] should be called automatically
+ * right after client connects.
+ * Note this parameter will be ignored if startConnectionImmediately is set to false as we cannot
+ * query for owned purchases without billing client being connected.
+ * @param billingListener default listener that'll be added as [addBillingListener].
  */
-@Suppress("unused")
+@Suppress("MemberVisibilityCanBePrivate", "unused")
 class BillingHelper(
         context: Context,
         private val skuNames: List<String>,
@@ -56,13 +60,21 @@ class BillingHelper(
         get() = billingClient.isReady
 
     /**
+     * Retrieve [BillingClient.ConnectionState] from billingClient
+     */
+    val connectionState: Int
+        get() = billingClient.connectionState
+
+    /**
      * Determine if owned purchases have been successfully queried yet.
+     * That happens with successful completion of [initQueryOwnedPurchases].
      */
     var purchasesQueried = false
         private set
 
     /**
      * Determine if sku details have been successfully queried yet.
+     * That happens with successful completion of [initQuerySkuDetails].
      */
     var skuDetailsQueried = false
         private set
@@ -105,8 +117,10 @@ class BillingHelper(
                 .build()
         billingClient.consumeAsync(consumeParams) { billingResult, _ ->
             invokeListener(
-                event = if (billingResult.isResponseOk())
-                    BillingEvent.CONSUME_PURCHASE_SUCCESS else BillingEvent.CONSUME_PURCHASE_FAILED,
+                event = when {
+                    billingResult.isResponseOk() -> BillingEvent.CONSUME_PURCHASE_SUCCESS
+                    else -> BillingEvent.CONSUME_PURCHASE_FAILED
+                },
                 message = billingResult.debugMessage,
                 responseCode = billingResult.responseCode)
         }
@@ -122,31 +136,29 @@ class BillingHelper(
     }
 
     /**
-     * will return a single [SkuDetails] object.
-     * Note that you need to query for owned purchases first using [initQuerySkuDetails] or in
-     * some cases complete a purchase in order for this to be not null
+     * Will return a single [Purchase] object that contains a given [skuName] or null
+     * if no match found.
+     * Note that you need to query for owned purchases using [initQuerySkuDetails] or complete a
+     * purchase before, in order for this to be not null.
      */
-    @SuppressWarnings("WeakerAccess")
-    fun getPurchaseForSkuName(skuName: String): Purchase? {
-        return purchases.find { purchase -> purchase.sku == skuName }
+    fun getPurchaseWithSkuName(skuName: String): Purchase? {
+        return purchases.find { it.skus.contains(skuName) }
     }
 
     /**
-     * will return a single [SkuDetails] object.
-     * Note that you need to query for details first using [initQueryOwnedPurchases] in order to
-     * get a result.
+     * Will return a single [SkuDetails] object with a given [skuName] or null if no match found.
+     * Note that you need to query for sku details first using [initQueryOwnedPurchases] in order
+     * for this not to be null.
      */
-    @SuppressWarnings("WeakerAccess")
     fun getSkuDetails(skuName: String): SkuDetails? {
-        return skuDetailsList.find { skuDetail -> skuDetail.sku == skuName }
+        return skuDetailsList.find { it.sku == skuName }
     }
 
     /**
      * Determine whether product with given name has state set as purchased
      */
-    @SuppressWarnings("WeakerAccess")
     fun isPurchased(skuName: String): Boolean {
-        return (getPurchaseForSkuName(skuName)?.isPurchased() == true)
+        return getPurchaseWithSkuName(skuName)?.isPurchased() == true
     }
 
     /**
@@ -196,8 +208,11 @@ class BillingHelper(
                 .build()
         billingClient.launchPriceChangeConfirmationFlow(activity, priceChangeFlowParams) { billingResult ->
             invokeListener(
-                event = if (billingResult.isResponseOk())
-                    BillingEvent.PRICE_CHANGE_CONFIRMATION_SUCCESS else BillingEvent.PRICE_CHANGE_CONFIRMATION_CANCELLED,
+                event = when {
+                    billingResult.isResponseOk() -> BillingEvent.PRICE_CHANGE_CONFIRMATION_SUCCESS
+                    billingResult.isResponseUserCancelled() -> BillingEvent.PRICE_CHANGE_CONFIRMATION_CANCELLED
+                    else -> BillingEvent.PRICE_CHANGE_CONFIRMATION_FAILED
+                },
                 message = billingResult.debugMessage,
                 responseCode = billingResult.responseCode)
         }
@@ -212,7 +227,6 @@ class BillingHelper(
      * @param queryOwnedPurchasesOnConnected set whether [initQueryOwnedPurchases] should be
      * called right after client connects.
      */
-    @SuppressWarnings("WeakerAccess")
     fun initClientConnection(querySkuDetailsOnConnected: Boolean = false,
                              queryOwnedPurchasesOnConnected: Boolean = false) {
         if (billingClient.isReady) {
@@ -224,8 +238,10 @@ class BillingHelper(
             override fun onBillingSetupFinished(billingResult: BillingResult) {
                 // report billing ready
                 invokeListener(
-                    event = if (billingResult.isResponseOk())
-                        BillingEvent.BILLING_CONNECTED else BillingEvent.BILLING_CONNECTION_FAILED,
+                    event = when {
+                        billingResult.isResponseOk() -> BillingEvent.BILLING_CONNECTED
+                        else -> BillingEvent.BILLING_CONNECTION_FAILED
+                    },
                     message = billingResult.debugMessage,
                     responseCode = billingResult.responseCode)
                 // initialize queries on start, if allowed to do so
@@ -256,24 +272,32 @@ class BillingHelper(
      * automatically when client connects (See [BillingHelper] constructor for more info).
      */
     fun initQueryOwnedPurchases() {
-        val ownedPurchases = mutableListOf<Purchase>()
+        // temp list to be assembled through queries
+        val queryOwnedPurchases = mutableListOf<Purchase>()
+        // count successful queries
+        var successfulTypeQueries = 0
+
+        // repeat for in-app purchases and subscriptions
         for (purchaseType in ALL_PURCHASE_TYPES) {
-            billingClient.queryPurchases(purchaseType).let {
-                if (it.billingResult.isResponseOk()) {
-                    purchasesQueried = true
-                    it.purchasesList?.let { purchasesList -> ownedPurchases.addAll(purchasesList) }
+            billingClient.queryPurchasesAsync(purchaseType) { queryResult, purchases ->
+                if (queryResult.isResponseOk()) {
+                    successfulTypeQueries++ // successful query count increase
+                    queryOwnedPurchases.addAll(purchases)
                 } else {
                     invokeListener(
                         event = BillingEvent.QUERY_OWNED_PURCHASES_FAILED,
-                        message = it.billingResult.debugMessage,
-                        responseCode = it.billingResult.responseCode)
-                    return
+                        message = queryResult.debugMessage,
+                        responseCode = queryResult.responseCode
+                    )
+                }
+                // all queries were completed successfully, safe to update the list and trigger listener
+                if (successfulTypeQueries == ALL_PURCHASE_TYPES.size) {
+                    this.purchases = queryOwnedPurchases
+                    this.purchasesQueried = true
+                    invokeListener(BillingEvent.QUERY_OWNED_PURCHASES_COMPLETE)
                 }
             }
         }
-        // update list
-        purchases = ownedPurchases
-        invokeListener(BillingEvent.QUERY_OWNED_PURCHASES_COMPLETE)
     }
 
     /**
@@ -301,7 +325,11 @@ class BillingHelper(
                     successfulTypeQueries++ // successful query count increase
                     skuDetailsList?.let { querySkuDetailsList.addAll(it) }
                 } else {
-                    invokeListener(BillingEvent.QUERY_SKU_DETAILS_FAILED, queryResult.debugMessage, queryResult.responseCode)
+                    invokeListener(
+                        event = BillingEvent.QUERY_SKU_DETAILS_FAILED,
+                        message = queryResult.debugMessage,
+                        responseCode = queryResult.responseCode
+                    )
                 }
                 // all queries were completed successfully, safe to update the list and trigger listener
                 if (successfulTypeQueries == ALL_PURCHASE_TYPES.size) {
@@ -312,6 +340,17 @@ class BillingHelper(
                 }
             }
         }
+    }
+
+    /**
+     * Conveniently determine if feature is supported by calling [BillingClient.isFeatureSupported]
+     *
+     * @param feature one of [BillingClient.FeatureType]
+     * @return [Boolean.true] if response is [BillingClient.BillingResponseCode.OK], [Boolean.false]
+     * if response was [BillingClient.BillingResponseCode.FEATURE_NOT_SUPPORTED]
+     */
+    fun isFeatureSupported(feature: String): Boolean {
+        return billingClient.isFeatureSupported(feature).isResponseOk()
     }
 
     /**
@@ -326,9 +365,11 @@ class BillingHelper(
                         .setPurchaseToken(purchase.purchaseToken)
                         .build()
                 billingClient.acknowledgePurchase(acknowledgePurchaseParams) { billingResult ->
-                    invokeListener(event =
-                            if (billingResult.isResponseOk()) BillingEvent.PURCHASE_ACKNOWLEDGED
-                            else BillingEvent.PURCHASE_ACKNOWLEDGE_FAILED,
+                    invokeListener(
+                        event = when {
+                            billingResult.isResponseOk() -> BillingEvent.PURCHASE_ACKNOWLEDGE_SUCCESS
+                            else -> BillingEvent.PURCHASE_ACKNOWLEDGE_FAILED
+                        },
                         message = billingResult.debugMessage,
                         responseCode = billingResult.responseCode)
                 }
@@ -338,9 +379,8 @@ class BillingHelper(
 
     // region billing listener
     /**
-     * Add a listener to [billingListeners]
+     * Add a listener to [billingListeners] if not already present
      */
-    @SuppressWarnings("WeakerAccess")
     fun addBillingListener(listener: BillingListener) {
         if (!billingListeners.contains(listener)) billingListeners.add(listener)
     }
@@ -358,8 +398,8 @@ class BillingHelper(
     private fun invokeListener(event: BillingEvent, message: String? = null, responseCode: Int? = null) {
         Handler(Looper.getMainLooper()).post {
             try {
-                for (billingListener in billingListeners) {
-                    billingListener.onBillingEvent(event, message, responseCode)
+                billingListeners.forEach {
+                    it.onBillingEvent(event, message, responseCode)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
