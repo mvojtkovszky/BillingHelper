@@ -16,7 +16,8 @@ class MainActivity: AppCompatActivity(), BillingListener {
         // owned purchases queried. All events are reported via billingListener.
         billing = BillingHelper(
                 context = this, 
-                skuNames = listOf("inAppPurchaseSkuName1", "inAppPurchaseSkuName2", "subscriptionSkuName"),
+                skuInAppPurchases = listOf("inAppPurchaseSkuName1", "inAppPurchaseSkuName2"),
+                skuSubscriptions = null,
                 billingListener = this)
     }
 

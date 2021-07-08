@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import com.android.billingclient.api.*
 
 /**
@@ -13,7 +14,8 @@ import com.android.billingclient.api.*
  * manually.
  *
  * @param context required to build [BillingClient].
- * @param skuNames list of sku names supported by the app. Both in app purchases and subscriptions.
+ * @param skuInAppPurchases list of sku names of in app purchases supported by the app.
+ * @param skuSubscriptions list of sku names of subscriptions supported by the app.
  * @param startConnectionImmediately set whether [initClientConnection] should be called automatically
  * right after client is constructed.
  * @param querySkuDetailsOnConnected set whether [initQuerySkuDetails] should be called automatically
@@ -32,16 +34,14 @@ import com.android.billingclient.api.*
 @Suppress("MemberVisibilityCanBePrivate", "unused")
 class BillingHelper(
     context: Context,
-    private val skuNames: List<String>,
+    private val skuInAppPurchases: List<String>?,
+    private val skuSubscriptions: List<String>?,
     startConnectionImmediately: Boolean = true,
     querySkuDetailsOnConnected: Boolean = true,
     queryOwnedPurchasesOnConnected: Boolean = true,
     var autoAcknowledgePurchases: Boolean = true,
     billingListener: BillingListener? = null
 ) {
-    companion object {
-        private val ALL_PURCHASE_TYPES = arrayOf(BillingClient.SkuType.INAPP, BillingClient.SkuType.SUBS)
-    }
 
     // billing client
     private var billingClient: BillingClient
@@ -80,6 +80,12 @@ class BillingHelper(
         private set
 
     init {
+        if (skuSubscriptions == null && skuInAppPurchases == null) {
+            throw IllegalStateException(
+                "Both skuSubscriptions and skuInAppPurchases missing. Define at least one of them."
+            )
+        }
+
         // add default listener, if present
         billingListener?.let { billingListeners.add(it) }
 
@@ -121,7 +127,8 @@ class BillingHelper(
                     else -> BillingEvent.CONSUME_PURCHASE_FAILED
                 },
                 message = billingResult.debugMessage,
-                responseCode = billingResult.responseCode)
+                responseCode = billingResult.responseCode
+            )
         }
     }
 
@@ -202,7 +209,8 @@ class BillingHelper(
             // report purchase flow error
             invokeListener(
                 event = BillingEvent.PURCHASE_FAILED,
-                message = if (!billingClient.isReady) "Billing not ready" else "SKU details not available")
+                message = if (!billingClient.isReady) "Billing not ready" else "SKU details not available"
+            )
         }
     }
 
@@ -221,7 +229,8 @@ class BillingHelper(
                     else -> BillingEvent.PRICE_CHANGE_CONFIRMATION_FAILED
                 },
                 message = billingResult.debugMessage,
-                responseCode = billingResult.responseCode)
+                responseCode = billingResult.responseCode
+            )
         }
     }
 
@@ -250,7 +259,8 @@ class BillingHelper(
                         else -> BillingEvent.BILLING_CONNECTION_FAILED
                     },
                     message = billingResult.debugMessage,
-                    responseCode = billingResult.responseCode)
+                    responseCode = billingResult.responseCode
+                )
                 // initialize queries on start, if allowed to do so
                 if (billingResult.isResponseOk()) {
                     // query for sku details
@@ -279,32 +289,7 @@ class BillingHelper(
      * automatically when client connects (See [BillingHelper] constructor for more info).
      */
     fun initQueryOwnedPurchases() {
-        // temp list to be assembled through queries
-        val queryOwnedPurchases = mutableListOf<Purchase>()
-        // count successful queries
-        var successfulTypeQueries = 0
-
-        // repeat for in-app purchases and subscriptions
-        for (purchaseType in ALL_PURCHASE_TYPES) {
-            billingClient.queryPurchasesAsync(purchaseType) { queryResult, purchases ->
-                if (queryResult.isResponseOk()) {
-                    successfulTypeQueries++ // successful query count increase
-                    queryOwnedPurchases.addAll(purchases)
-                } else {
-                    invokeListener(
-                        event = BillingEvent.QUERY_OWNED_PURCHASES_FAILED,
-                        message = queryResult.debugMessage,
-                        responseCode = queryResult.responseCode
-                    )
-                }
-                // all queries were completed successfully, safe to update the list and trigger listener
-                if (successfulTypeQueries == ALL_PURCHASE_TYPES.size) {
-                    updatePurchases(purchases)
-                    this.purchasesQueried = true
-                    invokeListener(BillingEvent.QUERY_OWNED_PURCHASES_COMPLETE)
-                }
-            }
-        }
+        initQueryOwnedPurchasesForType(getAvailableTypes(), 0, mutableListOf())
     }
 
     /**
@@ -316,37 +301,7 @@ class BillingHelper(
      * automatically when client connects (See [BillingHelper] constructor for more info).
      */
     fun initQuerySkuDetails() {
-        // temp list to be assembled through queries
-        val querySkuDetailsList = mutableListOf<SkuDetails>()
-        // count successful queries
-        var successfulTypeQueries = 0
-
-        // repeat for in-app purchases and subscriptions
-        for (purchaseType in ALL_PURCHASE_TYPES) {
-            val skuDetailsParams = SkuDetailsParams.newBuilder()
-                    .setSkusList(skuNames)
-                    .setType(purchaseType)
-                    .build()
-            billingClient.querySkuDetailsAsync(skuDetailsParams) { queryResult, skuDetailsList ->
-                if (queryResult.isResponseOk()) {
-                    successfulTypeQueries++ // successful query count increase
-                    skuDetailsList?.let { querySkuDetailsList.addAll(it) }
-                } else {
-                    invokeListener(
-                        event = BillingEvent.QUERY_SKU_DETAILS_FAILED,
-                        message = queryResult.debugMessage,
-                        responseCode = queryResult.responseCode
-                    )
-                }
-                // all queries were completed successfully, safe to update the list and trigger listener
-                if (successfulTypeQueries == ALL_PURCHASE_TYPES.size) {
-                    this.skuDetailsList.clear()
-                    this.skuDetailsList.addAll(querySkuDetailsList)
-                    this.skuDetailsQueried = true
-                    invokeListener(BillingEvent.QUERY_SKU_DETAILS_COMPLETE)
-                }
-            }
-        }
+        initQuerySkuDetailsForType(getAvailableTypes(), 0, mutableListOf())
     }
 
     /**
@@ -370,7 +325,8 @@ class BillingHelper(
         if (!billingClient.isReady) {
             invokeListener(
                 event = BillingEvent.PURCHASE_ACKNOWLEDGE_FAILED,
-                message = "Billing not ready")
+                message = "Billing not ready"
+            )
             return
         }
 
@@ -386,7 +342,68 @@ class BillingHelper(
                             else -> BillingEvent.PURCHASE_ACKNOWLEDGE_FAILED
                         },
                         message = billingResult.debugMessage,
-                        responseCode = billingResult.responseCode)
+                        responseCode = billingResult.responseCode
+                    )
+                }
+            }
+        }
+    }
+
+    // allows to call queryPurchasesAsync recursively on all types
+    private fun initQueryOwnedPurchasesForType(types: List<String>,
+                                               currentTypeIndex: Int,
+                                               resultingList: MutableList<Purchase>) {
+        // handled all types
+        if (currentTypeIndex == types.size) {
+            this.purchasesQueried = true
+            updatePurchases(resultingList)
+            invokeListener(event = BillingEvent.QUERY_OWNED_PURCHASES_COMPLETE)
+        }
+        // query for type on current index
+        else {
+            billingClient.queryPurchasesAsync(types[currentTypeIndex]) { queryResult, purchases ->
+                if (queryResult.isResponseOk()) {
+                    resultingList.addAll(purchases)
+                    initQueryOwnedPurchasesForType(types, currentTypeIndex+1, resultingList)
+                } else {
+                    invokeListener(
+                        event = BillingEvent.QUERY_OWNED_PURCHASES_FAILED,
+                        message = queryResult.debugMessage,
+                        responseCode = queryResult.responseCode
+                    )
+                }
+            }
+        }
+    }
+
+    // allows to call querySkuDetailsAsync recursively on all types
+    private fun initQuerySkuDetailsForType(types: List<String>,
+                                           currentTypeIndex: Int,
+                                           resultingList: MutableList<SkuDetails>) {
+        // handled all types
+        if (currentTypeIndex == types.size) {
+            this.skuDetailsQueried = true
+            this.skuDetailsList.clear()
+            this.skuDetailsList.addAll(resultingList)
+            invokeListener(BillingEvent.QUERY_SKU_DETAILS_COMPLETE)
+        }
+        // query for type on current index
+        else {
+            val currentType = types[currentTypeIndex]
+            val skuDetailsParams = SkuDetailsParams.newBuilder()
+                .setSkusList(getSkusForType(currentType))
+                .setType(currentType)
+                .build()
+            billingClient.querySkuDetailsAsync(skuDetailsParams) { queryResult, skuDetailsList ->
+                if (queryResult.isResponseOk()) {
+                    skuDetailsList?.let { resultingList.addAll(it) }
+                    initQuerySkuDetailsForType(types, currentTypeIndex+1, resultingList)
+                } else {
+                    invokeListener(
+                        event = BillingEvent.QUERY_SKU_DETAILS_FAILED,
+                        message = queryResult.debugMessage,
+                        responseCode = queryResult.responseCode
+                    )
                 }
             }
         }
@@ -400,6 +417,27 @@ class BillingHelper(
         // handle acknowledgement
         if (autoAcknowledgePurchases) {
             acknowledgePurchases(purchases)
+        }
+    }
+
+    // get available sku based on SkyType
+    private fun getSkusForType(@BillingClient.SkuType type: String): List<String> {
+        return when {
+            type == BillingClient.SkuType.INAPP && skuInAppPurchases != null -> skuInAppPurchases
+            type == BillingClient.SkuType.SUBS && skuSubscriptions != null -> skuSubscriptions
+            else -> emptyList()
+        }
+    }
+
+    // get available sku based on SkuTypes based on skuInAppPurchases and skuSubscriptions availability
+    private fun getAvailableTypes(): List<String> {
+        return mutableListOf<String>().apply {
+            if (skuInAppPurchases.isNullOrEmpty().not()) {
+                add(BillingClient.SkuType.INAPP)
+            }
+            if (skuSubscriptions.isNullOrEmpty().not()) {
+                add(BillingClient.SkuType.SUBS)
+            }
         }
     }
 
