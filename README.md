@@ -12,11 +12,13 @@ class MainActivity: AppCompatActivity(), BillingListener {
     override fun onCreate(savedInstanceState: Bundle?, persistentState: PersistableBundle?) {
         super.onCreate(savedInstanceState, persistentState)
 
-        // construct helper, by default, connection will be initialized immediately with sku details and
+        // Construct helper - by default, connection will be initialized immediately with sku details and
         // owned purchases queried. All events are reported via billingListener.
+        // At least one of skuInAppPurchases, skuSubscriptions is required.
         billing = BillingHelper(
                 context = this, 
-                skuNames = listOf("inAppPurchaseSkuName1", "inAppPurchaseSkuName2", "subscriptionSkuName"),
+                skuInAppPurchases = listOf("inAppPurchaseSkuName1", "inAppPurchaseSkuName2"),
+                skuSubscriptions = listOf("subscriptionSkuName"),
                 billingListener = this)
     }
 
