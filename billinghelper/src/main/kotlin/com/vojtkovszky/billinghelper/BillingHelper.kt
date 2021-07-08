@@ -4,31 +4,25 @@ import android.app.Activity
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import com.android.billingclient.api.*
 
 /**
  * Construct helper. By default, connection will be initialized immediately with sku details and
  * owned purchases queried.
- * You can omit this convenience flow by tweaking constructor parameters and handle everything
- * manually.
+ * This convenience flow can be omitted by tweaking constructor parameters.
  *
  * @param context required to build [BillingClient].
  * @param skuInAppPurchases list of sku names of in app purchases supported by the app.
  * @param skuSubscriptions list of sku names of subscriptions supported by the app.
  * @param startConnectionImmediately set whether [initClientConnection] should be called automatically
- * right after client is constructed.
+ * when [BillingHelper] is initialized.
  * @param querySkuDetailsOnConnected set whether [initQuerySkuDetails] should be called automatically
- * right after client connects.
- * Note this parameter will be ignored if startConnectionImmediately is set to false as we cannot
- * query for sku details without billing client being connected.
+ * right after client connects (when [initClientConnection] succeeds).
  * @param queryOwnedPurchasesOnConnected set whether [initQueryOwnedPurchases] should be called automatically
- * right after client connects.
- * Note this parameter will be ignored if startConnectionImmediately is set to false as we cannot
- * query for owned purchases without billing client being connected.
- * @param autoAcknowledgePurchases All purchases require acknowledgement. By default, this is handled
- * automatically every time state of purchases changes. It set to [Boolean.false], make sure to
- * manually call [acknowledgePurchases].
+ * right after client connects (when [initClientConnection] succeeds).
+ * @param autoAcknowledgePurchases All purchases require acknowledgement.
+ * By default, this is handled automatically every time state of purchases changes.
+ * If set to [Boolean.false], make sure [acknowledgePurchases] is used manually.
  * @param billingListener default listener that'll be added as [addBillingListener].
  */
 @Suppress("MemberVisibilityCanBePrivate", "unused")
@@ -36,9 +30,9 @@ class BillingHelper(
     context: Context,
     private val skuInAppPurchases: List<String>?,
     private val skuSubscriptions: List<String>?,
-    startConnectionImmediately: Boolean = true,
-    querySkuDetailsOnConnected: Boolean = true,
-    queryOwnedPurchasesOnConnected: Boolean = true,
+    private val startConnectionImmediately: Boolean = true,
+    var querySkuDetailsOnConnected: Boolean = true,
+    var queryOwnedPurchasesOnConnected: Boolean = true,
     var autoAcknowledgePurchases: Boolean = true,
     billingListener: BillingListener? = null
 ) {
@@ -95,7 +89,15 @@ class BillingHelper(
             .setListener { billingResult, purchases -> // PurchasesUpdatedListener
                 val billingEvent = when {
                     billingResult.isResponseOk() && purchases != null -> {
-                        updatePurchases(purchases)
+                        // update in current purchases
+                        for (purchase in purchases) {
+                            addOrUpdatePurchase(purchase)
+                        }
+                        // handle acknowledgement
+                        if (autoAcknowledgePurchases) {
+                            acknowledgePurchases(purchases)
+                        }
+                        // return complete
                         BillingEvent.PURCHASE_COMPLETE
                     }
                     billingResult.isResponseUserCancelled() -> BillingEvent.PURCHASE_CANCELLED
@@ -215,36 +217,45 @@ class BillingHelper(
     }
 
     /**
-     * Will initiate a price change confirmation flow.
+     * Will init and handle a call to [BillingClient.launchPriceChangeConfirmationFlow]
      */
-    fun launchPriceChangeConfirmationFlow(activity: Activity, skuDetails: SkuDetails) {
-        val priceChangeFlowParams = PriceChangeFlowParams.Builder()
-                .setSkuDetails(skuDetails)
+    fun launchPriceChangeConfirmationFlow(activity: Activity, skuName: String) {
+        val skuDetailsForChange = getSkuDetails(skuName)
+        if (billingClient.isReady && skuDetailsForChange != null) {
+            val priceChangeFlowParams = PriceChangeFlowParams.Builder()
+                .setSkuDetails(skuDetailsForChange)
                 .build()
-        billingClient.launchPriceChangeConfirmationFlow(activity, priceChangeFlowParams) { billingResult ->
+            billingClient.launchPriceChangeConfirmationFlow(activity, priceChangeFlowParams) { billingResult ->
+                invokeListener(
+                    event = when {
+                        billingResult.isResponseOk() -> BillingEvent.PRICE_CHANGE_CONFIRMATION_SUCCESS
+                        billingResult.isResponseUserCancelled() -> BillingEvent.PRICE_CHANGE_CONFIRMATION_CANCELLED
+                        else -> BillingEvent.PRICE_CHANGE_CONFIRMATION_FAILED
+                    },
+                    message = billingResult.debugMessage,
+                    responseCode = billingResult.responseCode
+                )
+            }
+        } else {
+            // report error
             invokeListener(
-                event = when {
-                    billingResult.isResponseOk() -> BillingEvent.PRICE_CHANGE_CONFIRMATION_SUCCESS
-                    billingResult.isResponseUserCancelled() -> BillingEvent.PRICE_CHANGE_CONFIRMATION_CANCELLED
-                    else -> BillingEvent.PRICE_CHANGE_CONFIRMATION_FAILED
-                },
-                message = billingResult.debugMessage,
-                responseCode = billingResult.responseCode
+                event = BillingEvent.PRICE_CHANGE_CONFIRMATION_FAILED,
+                message = if (!billingClient.isReady) "Billing not ready" else "SKU details not available"
             )
         }
     }
 
     /**
      * Will initiate [BillingClient.startConnection]. If client is already connected, process
-     * will be skipped and [BillingEvent.BILLING_CONNECTED] will be invoked via callback.
+     * will be skipped and [BillingEvent.BILLING_CONNECTED] will be invoked.
      *
      * @param querySkuDetailsOnConnected set whether [initQuerySkuDetails] should be called
-     * right after client connects.
-     * @param queryOwnedPurchasesOnConnected set whether [initQueryOwnedPurchases] should be
-     * called right after client connects.
+     * right after client connects. Defaults to [BillingHelper.querySkuDetailsOnConnected]
+     * @param queryOwnedPurchasesOnConnected set whether [initQueryOwnedPurchases] should be called
+     * right after client connects. Defaults to [BillingHelper.queryOwnedPurchasesOnConnected]
      */
-    fun initClientConnection(querySkuDetailsOnConnected: Boolean = false,
-                             queryOwnedPurchasesOnConnected: Boolean = false) {
+    fun initClientConnection(querySkuDetailsOnConnected: Boolean = this.querySkuDetailsOnConnected,
+                             queryOwnedPurchasesOnConnected: Boolean = this.queryOwnedPurchasesOnConnected) {
         if (billingClient.isReady) {
             invokeListener(BillingEvent.BILLING_CONNECTED, "BillingClient already connected, skipping.")
             return
@@ -316,8 +327,7 @@ class BillingHelper(
     }
 
     /**
-     * All purchases require acknowledgement. Failure to acknowledge a purchase will result in that
-     * purchase being refunded.
+     * Will init and handle a call to [BillingClient.acknowledgePurchase]
      * By default, this is handled automatically every time state of purchases changes.
      * See [autoAcknowledgePurchases] if you want to change that behaviour.
      */
@@ -349,14 +359,52 @@ class BillingHelper(
         }
     }
 
+    // region billing listener
+    /**
+     * Add a listener to [billingListeners] if not already present
+     */
+    fun addBillingListener(listener: BillingListener) {
+        if (!billingListeners.contains(listener)) billingListeners.add(listener)
+    }
+
+    /**
+     * Remove a listener from [billingListeners]
+     */
+    fun removeBillingListener(listener: BillingListener) {
+        billingListeners.remove(listener)
+    }
+
+    // Invoke a listener on UI thread
+    private fun invokeListener(event: BillingEvent, message: String? = null, responseCode: Int? = null) {
+        Handler(Looper.getMainLooper()).post {
+            try {
+                billingListeners.forEach {
+                    it.onBillingEvent(event, message, responseCode)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+    // endregion billing listener
+
+    // region Private Methods
     // allows to call queryPurchasesAsync recursively on all types
     private fun initQueryOwnedPurchasesForType(types: List<String>,
                                                currentTypeIndex: Int,
                                                resultingList: MutableList<Purchase>) {
         // handled all types
         if (currentTypeIndex == types.size) {
+            // mark as queried
             this.purchasesQueried = true
-            updatePurchases(resultingList)
+            // repopulate purchases
+            this.purchases.clear()
+            this.purchases.addAll(resultingList)
+            // handle acknowledgement
+            if (autoAcknowledgePurchases) {
+                acknowledgePurchases(purchases)
+            }
+            // invoke callback
             invokeListener(event = BillingEvent.QUERY_OWNED_PURCHASES_COMPLETE)
         }
         // query for type on current index
@@ -410,21 +458,21 @@ class BillingHelper(
     }
 
     // purchases list repopulate and handle logic of acknowledge check and init
-    private fun updatePurchases(purchases: List<Purchase>) {
-        // update our list
+    private fun addOrUpdatePurchase(purchase: Purchase) {
+        val newPurchases = this.purchases
+            .filter { it.orderId != purchase.orderId }
+            .toMutableList()
+            .also { it.add(purchase) }
+
         this.purchases.clear()
-        this.purchases.addAll(purchases)
-        // handle acknowledgement
-        if (autoAcknowledgePurchases) {
-            acknowledgePurchases(purchases)
-        }
+        this.purchases.addAll(newPurchases)
     }
 
     // get available sku based on SkyType
     private fun getSkusForType(@BillingClient.SkuType type: String): List<String> {
-        return when {
-            type == BillingClient.SkuType.INAPP && skuInAppPurchases != null -> skuInAppPurchases
-            type == BillingClient.SkuType.SUBS && skuSubscriptions != null -> skuSubscriptions
+        return when (type) {
+            BillingClient.SkuType.INAPP -> skuInAppPurchases.orEmpty()
+            BillingClient.SkuType.SUBS -> skuSubscriptions.orEmpty()
             else -> emptyList()
         }
     }
@@ -440,37 +488,7 @@ class BillingHelper(
             }
         }
     }
-
-    // region billing listener
-    /**
-     * Add a listener to [billingListeners] if not already present
-     */
-    fun addBillingListener(listener: BillingListener) {
-        if (!billingListeners.contains(listener)) billingListeners.add(listener)
-    }
-
-    /**
-     * Remove a listener from [billingListeners]
-     */
-    fun removeBillingListener(listener: BillingListener) {
-        billingListeners.remove(listener)
-    }
-
-    /**
-     * Invoke a listener on UI thread
-     */
-    private fun invokeListener(event: BillingEvent, message: String? = null, responseCode: Int? = null) {
-        Handler(Looper.getMainLooper()).post {
-            try {
-                billingListeners.forEach {
-                    it.onBillingEvent(event, message, responseCode)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
-    // endregion billing listener
+    // endregion Private Methods
 
     // region private extension functions
     private fun BillingResult.isResponseOk(): Boolean =
