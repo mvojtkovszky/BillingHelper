@@ -19,7 +19,8 @@ class MainActivity: AppCompatActivity(), BillingListener {
                 context = this, 
                 skuInAppPurchases = listOf("inAppPurchaseSkuName1", "inAppPurchaseSkuName2"),
                 skuSubscriptions = listOf("subscriptionSkuName"),
-                billingListener = this)
+                billingListener = this
+        )
     }
 
     override fun onDestroy() {
@@ -40,7 +41,6 @@ fun consumePurchase(purchase: Purchase)
 fun endClientConnection()
 fun getPurchaseForSkuName(skuName: String): Purchase?
 fun getSkuDetails(skuName: String): SkuDetails?
-fun isBillingReady(): Boolean
 fun isPurchased(skuName: String): Boolean
 fun launchPurchaseFlow(activity: Activity, skuName: String)
 fun launchPriceChangeConfirmationFlow(activity: Activity, skuDetails: SkuDetails)
@@ -51,8 +51,14 @@ fun acknowledgePurchases(purchases: List<Purchase>)
 fun isFeatureSupported(feature: String)
 fun addBillingListener(listener: BillingListener)
 fun removeBillingListener(listener: BillingListener)
+
+var querySkuDetailsOnConnected: Boolean
+var queryOwnedPurchasesOnConnected: Boolean
+var autoAcknowledgePurchases: Boolean
 val billingReady: Boolean
 val connectionState: Int
+val purchasesQueried: Boolean
+val skuDetailsQueried: Boolean
 ```
 
 <br/>BillingEvent includes all of the things you might be interested in, served via BillingListener 
