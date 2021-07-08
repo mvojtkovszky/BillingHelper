@@ -141,7 +141,11 @@ class BillingHelper(
      * purchase before, in order for this to be not null.
      */
     fun getPurchaseWithSkuName(skuName: String): Purchase? {
-        return purchases.find { it.skus.contains(skuName) }
+        return try {
+            purchases.find { it.skus.contains(skuName) }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     /**
@@ -150,7 +154,11 @@ class BillingHelper(
      * for this not to be null.
      */
     fun getSkuDetails(skuName: String): SkuDetails? {
-        return skuDetailsList.find { it.sku == skuName }
+        return try {
+            skuDetailsList.find { it.sku == skuName }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     /**
