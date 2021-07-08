@@ -24,16 +24,20 @@ import com.android.billingclient.api.*
  * right after client connects.
  * Note this parameter will be ignored if startConnectionImmediately is set to false as we cannot
  * query for owned purchases without billing client being connected.
+ * @param autoAcknowledgePurchases All purchases require acknowledgement. By default, this is handled
+ * automatically every time state of purchases changes. It set to [Boolean.false], make sure to
+ * manually call [acknowledgePurchases].
  * @param billingListener default listener that'll be added as [addBillingListener].
  */
 @Suppress("MemberVisibilityCanBePrivate", "unused")
 class BillingHelper(
-        context: Context,
-        private val skuNames: List<String>,
-        startConnectionImmediately: Boolean = true,
-        querySkuDetailsOnConnected: Boolean = true,
-        queryOwnedPurchasesOnConnected: Boolean = true,
-        billingListener: BillingListener? = null
+    context: Context,
+    private val skuNames: List<String>,
+    startConnectionImmediately: Boolean = true,
+    querySkuDetailsOnConnected: Boolean = true,
+    queryOwnedPurchasesOnConnected: Boolean = true,
+    var autoAcknowledgePurchases: Boolean = true,
+    billingListener: BillingListener? = null
 ) {
     companion object {
         private val ALL_PURCHASE_TYPES = arrayOf(BillingClient.SkuType.INAPP, BillingClient.SkuType.SUBS)
@@ -42,11 +46,7 @@ class BillingHelper(
     // billing client
     private var billingClient: BillingClient
     // represents list of all currently owned purchases
-    private var purchases = emptyList<Purchase>()
-        set(value) {
-            acknowledgePurchases(value) // important to check if all owned purchases have been acknowledged
-            field = value
-        }
+    private val purchases = mutableListOf<Purchase>()
     // represents details of all available sku details
     private val skuDetailsList = mutableListOf<SkuDetails>()
     // callback listeners
@@ -89,8 +89,7 @@ class BillingHelper(
             .setListener { billingResult, purchases -> // PurchasesUpdatedListener
                 val billingEvent = when {
                     billingResult.isResponseOk() && purchases != null -> {
-                        // update our list and handle acknowledgement first
-                        this.purchases = purchases
+                        updatePurchases(purchases)
                         BillingEvent.PURCHASE_COMPLETE
                     }
                     billingResult.isResponseUserCancelled() -> BillingEvent.PURCHASE_CANCELLED
@@ -142,7 +141,11 @@ class BillingHelper(
      * purchase before, in order for this to be not null.
      */
     fun getPurchaseWithSkuName(skuName: String): Purchase? {
-        return purchases.find { it.skus.contains(skuName) }
+        return try {
+            purchases.find { it.skus.contains(skuName) }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     /**
@@ -151,7 +154,11 @@ class BillingHelper(
      * for this not to be null.
      */
     fun getSkuDetails(skuName: String): SkuDetails? {
-        return skuDetailsList.find { it.sku == skuName }
+        return try {
+            skuDetailsList.find { it.sku == skuName }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     /**
@@ -292,7 +299,7 @@ class BillingHelper(
                 }
                 // all queries were completed successfully, safe to update the list and trigger listener
                 if (successfulTypeQueries == ALL_PURCHASE_TYPES.size) {
-                    this.purchases = queryOwnedPurchases
+                    updatePurchases(purchases)
                     this.purchasesQueried = true
                     invokeListener(BillingEvent.QUERY_OWNED_PURCHASES_COMPLETE)
                 }
@@ -336,7 +343,7 @@ class BillingHelper(
                     this.skuDetailsList.clear()
                     this.skuDetailsList.addAll(querySkuDetailsList)
                     this.skuDetailsQueried = true
-                    invokeListener(BillingEvent.QUERY_SKU_DETAILS_COMPLETE, queryResult.debugMessage, queryResult.responseCode)
+                    invokeListener(BillingEvent.QUERY_SKU_DETAILS_COMPLETE)
                 }
             }
         }
@@ -356,11 +363,19 @@ class BillingHelper(
     /**
      * All purchases require acknowledgement. Failure to acknowledge a purchase will result in that
      * purchase being refunded.
-     * That's why we're making sure to call this every time we change [BillingHelper.purchases]
+     * By default, this is handled automatically every time state of purchases changes.
+     * See [autoAcknowledgePurchases] if you want to change that behaviour.
      */
-    private fun acknowledgePurchases(purchases: List<Purchase>) {
+    fun acknowledgePurchases(purchases: List<Purchase>) {
+        if (!billingClient.isReady) {
+            invokeListener(
+                event = BillingEvent.PURCHASE_ACKNOWLEDGE_FAILED,
+                message = "Billing not ready")
+            return
+        }
+
         for (purchase in purchases) {
-            if (billingClient.isReady && !purchase.isAcknowledged && purchase.isPurchased()) {
+            if (!purchase.isAcknowledged && purchase.isPurchased()) {
                 val acknowledgePurchaseParams = AcknowledgePurchaseParams.newBuilder()
                         .setPurchaseToken(purchase.purchaseToken)
                         .build()
@@ -374,6 +389,17 @@ class BillingHelper(
                         responseCode = billingResult.responseCode)
                 }
             }
+        }
+    }
+
+    // purchases list repopulate and handle logic of acknowledge check and init
+    private fun updatePurchases(purchases: List<Purchase>) {
+        // update our list
+        this.purchases.clear()
+        this.purchases.addAll(purchases)
+        // handle acknowledgement
+        if (autoAcknowledgePurchases) {
+            acknowledgePurchases(purchases)
         }
     }
 
