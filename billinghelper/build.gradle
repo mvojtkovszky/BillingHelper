@@ -1,28 +1,18 @@
 plugins {
     id 'com.android.library'
     id 'kotlin-android'
+    id 'org.jetbrains.dokka'
     id 'maven-publish'
 }
 
 android {
-    compileSdkVersion 30
-    buildToolsVersion "30.0.3"
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-    }
-
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_1_8
-    }
+    compileSdkVersion project.properties['compileSdkVersion'] as Integer
+    buildToolsVersion project.properties['buildToolsVersion'] as String
 
     defaultConfig {
-        minSdkVersion 16
-        targetSdkVersion 30
-        versionName "1.6.0"
-
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        minSdkVersion project.properties['minSdkVersion'] as Integer
+        targetSdkVersion project.properties['targetSdkVersion'] as Integer
+        versionName project.properties['versionName'] as String
     }
 
     sourceSets {
@@ -50,55 +40,4 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
 }
 
-// handle publishing
-project.afterEvaluate {
-    publishing {
-        publications {
-            library(MavenPublication) {
-                groupId = 'com.github.mvojtkovszky'
-                artifactId = 'BillingHelper'
-                version = android.defaultConfig.versionName
-                artifact bundleDebugAar
-                // make sure pom has all dependencies
-                pom.withXml {
-                    def dependenciesNode = asNode().appendNode('dependencies')
-                    configurations.api.allDependencies
-                            .findAll { dependency -> dependency.name != "unspecified" }
-                            .each { dependency ->
-                                addDependency(dependenciesNode.appendNode('dependency'), dependency, "compile")
-                            }
-                    configurations.implementation.allDependencies
-                            .findAll { dependency -> !configurations.api.allDependencies.contains(dependency) }
-                            .findAll { dependency -> dependency.name != "unspecified" }
-                            .each { dependency ->
-                                addDependency(dependenciesNode.appendNode('dependency'), dependency, "runtime")
-                            }
-                }
-            }
-        }
-    }
-}
-
-static def addDependency(dependencyNode, dependency, scope) {
-    dependencyNode.appendNode('groupId', dependency.group)
-    dependencyNode.appendNode('artifactId', dependency.name)
-    dependencyNode.appendNode('version', dependency.version)
-    dependencyNode.appendNode('scope', scope)
-}
-
-task javadoc(type: Javadoc) {
-    failOnError false
-    source = android.sourceSets.main.java.sourceFiles
-    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
-    classpath += configurations.compile
-}
-
-// build a jar with javadoc
-task javadocJar(type: Jar, dependsOn: javadoc) {
-    archiveClassifier.set('javadoc')
-    from javadoc.destinationDir
-}
-
-artifacts {
-    archives javadocJar
-}
+apply from: "$rootDir/gradle-mvn-push.gradle"
