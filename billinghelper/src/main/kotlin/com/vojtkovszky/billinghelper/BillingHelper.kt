@@ -413,8 +413,9 @@ class BillingHelper(
             // mark as queried
             this.purchasesQueried = true
             // repopulate purchases
-            this.purchases.clear()
-            this.purchases.addAll(resultingList)
+            for (purchase in resultingList) {
+                addOrUpdatePurchase(purchase)
+            }
             // handle acknowledgement
             if (autoAcknowledgePurchases) {
                 acknowledgePurchases(purchases)
@@ -473,6 +474,7 @@ class BillingHelper(
     }
 
     // purchases list repopulate and handle logic of acknowledge check and init
+    @Synchronized
     private fun addOrUpdatePurchase(purchase: Purchase) {
         val newPurchases = this.purchases
             .filter { it.orderId != purchase.orderId }
@@ -481,9 +483,9 @@ class BillingHelper(
                 // only include it if signature is valid
                 if (isSignatureValid(purchase)) {
                     it.add(purchase)
-
+                    
                     if (enableLogging) {
-                        Log.d(TAG, "Purchase with skus added: ${purchase.skus}")
+                        Log.d(TAG, "Owned purchase added: ${purchase.skus}")
                     }
                 }
             }
