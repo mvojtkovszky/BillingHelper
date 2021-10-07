@@ -1,7 +1,7 @@
 buildscript {
     ext {
         kotlin_version = "1.5.31" /* https://github.com/JetBrains/kotlin */
-        dokka_version = '1.5.30' /* https://github.com/Kotlin/dokka/releases */
+        dokka_version = '1.5.31' /* https://github.com/Kotlin/dokka/releases */
     }
 
     repositories {
