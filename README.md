@@ -15,6 +15,7 @@ class MainActivity: AppCompatActivity(), BillingListener {
         // Construct helper - by default, connection will be initialized immediately with sku details and
         // owned purchases queried. All events are reported via billingListener.
         // At least one of skuInAppPurchases, skuSubscriptions is required.
+        // For more configuration options, check BillingHelper constructor parameters.
         billing = BillingHelper(
                 context = this, 
                 skuInAppPurchases = listOf("inAppPurchaseSkuName1", "inAppPurchaseSkuName2"),

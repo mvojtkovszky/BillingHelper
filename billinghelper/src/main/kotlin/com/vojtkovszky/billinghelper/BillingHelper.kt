@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import com.android.billingclient.api.*
 
 /**
@@ -16,6 +17,7 @@ import com.android.billingclient.api.*
  * @param skuSubscriptions list of sku names of subscriptions supported by the app.
  * @param startConnectionImmediately set whether [initClientConnection] should be called automatically
  * when [BillingHelper] is initialized.
+ * @param key app's license key. If provided, it will be used to verify purchase signatures.
  * @param querySkuDetailsOnConnected set whether [initQuerySkuDetails] should be called automatically
  * right after client connects (when [initClientConnection] succeeds).
  * @param queryOwnedPurchasesOnConnected set whether [initQueryOwnedPurchases] should be called automatically
@@ -23,6 +25,7 @@ import com.android.billingclient.api.*
  * @param autoAcknowledgePurchases All purchases require acknowledgement.
  * By default, this is handled automatically every time state of purchases changes.
  * If set to [Boolean.false], make sure [acknowledgePurchases] is used manually.
+ * @param enableLogging toggle output of status logs
  * @param billingListener default listener that'll be added as [addBillingListener].
  */
 @Suppress("MemberVisibilityCanBePrivate", "unused")
@@ -31,11 +34,16 @@ class BillingHelper(
     private val skuInAppPurchases: List<String>?,
     private val skuSubscriptions: List<String>?,
     private val startConnectionImmediately: Boolean = true,
+    private var key: String? = null,
     var querySkuDetailsOnConnected: Boolean = true,
     var queryOwnedPurchasesOnConnected: Boolean = true,
     var autoAcknowledgePurchases: Boolean = true,
+    var enableLogging: Boolean = false,
     billingListener: BillingListener? = null
 ) {
+    companion object {
+        private const val TAG = "BillingHelper"
+    }
 
     // billing client
     private var billingClient: BillingClient
@@ -79,6 +87,8 @@ class BillingHelper(
                 "Both skuSubscriptions and skuInAppPurchases missing. Define at least one of them."
             )
         }
+
+        Security.enableLogging = this.enableLogging
 
         // add default listener, if present
         billingListener?.let { billingListeners.add(it) }
@@ -378,6 +388,11 @@ class BillingHelper(
     private fun invokeListener(event: BillingEvent, message: String? = null, responseCode: Int? = null) {
         Handler(Looper.getMainLooper()).post {
             try {
+                if (enableLogging) {
+                    Log.d(TAG, "Listener invoked for " +
+                            "event $event, message: $message, responseCode: $responseCode")
+                }
+
                 billingListeners.forEach {
                     it.onBillingEvent(event, message, responseCode)
                 }
@@ -398,8 +413,9 @@ class BillingHelper(
             // mark as queried
             this.purchasesQueried = true
             // repopulate purchases
-            this.purchases.clear()
-            this.purchases.addAll(resultingList)
+            for (purchase in resultingList) {
+                addOrUpdatePurchase(purchase)
+            }
             // handle acknowledgement
             if (autoAcknowledgePurchases) {
                 acknowledgePurchases(purchases)
@@ -458,11 +474,21 @@ class BillingHelper(
     }
 
     // purchases list repopulate and handle logic of acknowledge check and init
+    @Synchronized
     private fun addOrUpdatePurchase(purchase: Purchase) {
         val newPurchases = this.purchases
             .filter { it.orderId != purchase.orderId }
             .toMutableList()
-            .also { it.add(purchase) }
+            .also {
+                // only include it if signature is valid
+                if (isSignatureValid(purchase)) {
+                    it.add(purchase)
+                    
+                    if (enableLogging) {
+                        Log.d(TAG, "Owned purchase added: ${purchase.skus}")
+                    }
+                }
+            }
 
         this.purchases.clear()
         this.purchases.addAll(newPurchases)
@@ -487,6 +513,12 @@ class BillingHelper(
                 add(BillingClient.SkuType.SUBS)
             }
         }
+    }
+
+    // verify purchase if key is present
+    private fun isSignatureValid(purchase: Purchase): Boolean {
+        val key = this.key ?: return true
+        return Security.verifyPurchase(key, purchase.originalJson, purchase.signature)
     }
     // endregion Private Methods
 
