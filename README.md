@@ -60,6 +60,8 @@ val billingReady: Boolean
 val connectionState: Int
 val purchasesQueried: Boolean
 val skuDetailsQueried: Boolean
+val isConnectionFailure: Boolead
+val purchasesQueriedOrConnectionFailure: Boolean
 ```
 
 <br/>BillingEvent includes all of the things you might be interested in, served via BillingListener 
