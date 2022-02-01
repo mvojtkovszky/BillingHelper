@@ -81,6 +81,20 @@ class BillingHelper(
     var skuDetailsQueried = false
         private set
 
+    /**
+     * Ended up in a state of connection failure when trying to init client connection.
+     * If true, we know that connection was initialized but failed instead of just current
+     * connection state.
+     */
+    var isConnectionFailure = false
+        private set
+
+    /**
+     * Tells us if either [purchasesQueried] is true or [isConnectionFailure] is true.
+     */
+    val purchasesQueriedOrConnectionFailure
+        get() = purchasesQueried || isConnectionFailure
+
     init {
         if (skuSubscriptions == null && skuInAppPurchases == null) {
             throw IllegalStateException(
@@ -273,6 +287,7 @@ class BillingHelper(
 
         billingClient.startConnection(object : BillingClientStateListener {
             override fun onBillingSetupFinished(billingResult: BillingResult) {
+                isConnectionFailure = !billingResult.isResponseOk()
                 // report billing ready
                 invokeListener(
                     event = when {
@@ -410,8 +425,6 @@ class BillingHelper(
                                                resultingList: MutableList<Purchase>) {
         // handled all types
         if (currentTypeIndex == types.size) {
-            // mark as queried
-            this.purchasesQueried = true
             // repopulate purchases
             for (purchase in resultingList) {
                 addOrUpdatePurchase(purchase)
@@ -420,6 +433,8 @@ class BillingHelper(
             if (autoAcknowledgePurchases) {
                 acknowledgePurchases(purchases)
             }
+            // mark as queried
+            this.purchasesQueried = true
             // invoke callback
             invokeListener(event = BillingEvent.QUERY_OWNED_PURCHASES_COMPLETE)
         }
@@ -446,9 +461,9 @@ class BillingHelper(
                                            resultingList: MutableList<SkuDetails>) {
         // handled all types
         if (currentTypeIndex == types.size) {
-            this.skuDetailsQueried = true
             this.skuDetailsList.clear()
             this.skuDetailsList.addAll(resultingList)
+            this.skuDetailsQueried = true
             invokeListener(BillingEvent.QUERY_SKU_DETAILS_COMPLETE)
         }
         // query for type on current index
