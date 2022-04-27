@@ -71,28 +71,43 @@ class BillingHelper(
      * Determine if owned purchases have been successfully queried yet.
      * That happens with successful completion of [initQueryOwnedPurchases].
      */
-    var purchasesQueried = false
+    var purchasesQueried: Boolean = false
         private set
 
     /**
      * Determine if sku details have been successfully queried yet.
      * That happens with successful completion of [initQuerySkuDetails].
+     *
+     * Until sku details are queries any call to [launchPurchaseFlow] or
+     * [launchPriceChangeConfirmationFlow] will fail.
      */
-    var skuDetailsQueried = false
+    var skuDetailsQueried: Boolean = false
         private set
 
     /**
      * Ended up in a state of connection failure when trying to init client connection.
      * If true, we know that connection was initialized but failed instead of just current
      * connection state.
+     * This can happen if device is disconnected from Play services or user not logged in to the
+     * Play Store app.
      */
-    var isConnectionFailure = false
+    var isConnectionFailure: Boolean = false
         private set
 
     /**
-     * Tells us if either [purchasesQueried] is true or [isConnectionFailure] is true.
+     * Tells us if the state of purchases can be presented to the app.
+     * We determine this if either [purchasesQueried] is true or [isConnectionFailure] is true.
+     *
+     * -> If purchases have been queried, it means we are connected to billing and got result from,
+     *    querying purchases, so all is well.
+     * -> If connection failed, it means there are no purchases and neither will be.
+     *    This can happen if device is disconnected from Play services or user not logged in to the
+     *    Play Store app.
+     *
+     * In either case [Boolean.true] indicates that we did whatever we can to determine if purchases
+     * are available and can consider this state final and presentable to the app.
      */
-    val purchasesQueriedOrConnectionFailure
+    val purchasesPresentable: Boolean
         get() = purchasesQueried || isConnectionFailure
 
     init {
@@ -235,7 +250,7 @@ class BillingHelper(
             // report purchase flow error
             invokeListener(
                 event = BillingEvent.PURCHASE_FAILED,
-                message = if (!billingClient.isReady) "Billing not ready" else "SKU details not available"
+                message = getPurchaseFlowErrorMessage(skuName)
             )
         }
     }
@@ -264,7 +279,7 @@ class BillingHelper(
             // report error
             invokeListener(
                 event = BillingEvent.PRICE_CHANGE_CONFIRMATION_FAILED,
-                message = if (!billingClient.isReady) "Billing not ready" else "SKU details not available"
+                message = getPurchaseFlowErrorMessage(skuName)
             )
         }
     }
@@ -534,6 +549,16 @@ class BillingHelper(
     private fun isSignatureValid(purchase: Purchase): Boolean {
         val key = this.key ?: return true
         return Security.verifyPurchase(key, purchase.originalJson, purchase.signature)
+    }
+
+    // figure out what's wrong when trying to initialize purchase, because it fails due to
+    // predictable reasons
+    private fun getPurchaseFlowErrorMessage(skuName: String): String {
+        return when {
+            !billingClient.isReady -> "Billing not ready."
+            !skuDetailsQueried -> "SKU details have not been queried yet."
+            else -> "skuName $skuName not recognized among sku details."
+        }
     }
     // endregion Private Methods
 
