@@ -231,7 +231,10 @@ class BillingHelper(
      */
     fun launchPurchaseFlow(activity: Activity,
                            productName: String,
-                           selectedOfferIndex: Int? = null
+                           obfuscatedAccountId: String? = null,
+                           obfuscatedProfileId: String? = null,
+                           selectedOfferIndex: Int? = null,
+                           isOfferPersonalized: Boolean? = null
     ) {
         val productDetailsForPurchase = getProductDetails(productName)
 
@@ -245,10 +248,12 @@ class BillingHelper(
                 offerToken?.let { setOfferToken(offerToken) }
             }.build()
 
-            val billingFlowParams =
-                BillingFlowParams.newBuilder()
-                    .setProductDetailsParamsList(listOf(productDetailsParams))
-                    .build()
+            val billingFlowParams = BillingFlowParams.newBuilder().apply {
+                setProductDetailsParamsList(listOf(productDetailsParams))
+                obfuscatedAccountId?.let { setObfuscatedAccountId(it) }
+                obfuscatedProfileId?.let { setObfuscatedProfileId(it) }
+                isOfferPersonalized?.let { setIsOfferPersonalized(it) }
+            } .build()
 
             // Launch the billing flow
             val result = billingClient.launchBillingFlow(activity, billingFlowParams)
