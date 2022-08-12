@@ -13,8 +13,8 @@ import com.android.billingclient.api.*
  * This convenience flow can be omitted by tweaking constructor parameters.
  *
  * @param context required to build [BillingClient].
- * @param skuInAppPurchases list of sku names of in app purchases supported by the app.
- * @param skuSubscriptions list of sku names of subscriptions supported by the app.
+ * @param productInAppPurchases list of sku names of in app purchases supported by the app.
+ * @param productSubscriptions list of sku names of subscriptions supported by the app.
  * @param startConnectionImmediately set whether [initClientConnection] should be called automatically
  * when [BillingHelper] is initialized.
  * @param key app's license key. If provided, it will be used to verify purchase signatures.
@@ -31,8 +31,8 @@ import com.android.billingclient.api.*
 @Suppress("MemberVisibilityCanBePrivate", "unused")
 class BillingHelper(
     context: Context,
-    private val skuInAppPurchases: List<String>?,
-    private val skuSubscriptions: List<String>?,
+    private val productInAppPurchases: List<String>?,
+    private val productSubscriptions: List<String>?,
     private val startConnectionImmediately: Boolean = true,
     private var key: String? = null,
     var querySkuDetailsOnConnected: Boolean = true,
@@ -110,9 +110,9 @@ class BillingHelper(
         get() = purchasesQueried || isConnectionFailure
 
     init {
-        if (skuSubscriptions == null && skuInAppPurchases == null) {
+        if (productSubscriptions == null && productInAppPurchases == null) {
             throw IllegalStateException(
-                "Both skuSubscriptions and skuInAppPurchases missing. Define at least one of them."
+                "Both productSubscriptions and productInAppPurchases missing. Define at least one of them."
             )
         }
 
@@ -344,7 +344,7 @@ class BillingHelper(
     fun initQueryProductDetails() {
         val products = mutableListOf<QueryProductDetailsParams.Product>()
 
-        for (sub in skuSubscriptions.orEmpty()) {
+        for (sub in productSubscriptions.orEmpty()) {
             products.add(
                 QueryProductDetailsParams.Product.newBuilder()
                     .setProductId(sub)
@@ -353,7 +353,7 @@ class BillingHelper(
             )
         }
 
-        for (iap in skuSubscriptions.orEmpty()) {
+        for (iap in productInAppPurchases.orEmpty()) {
             products.add(
                 QueryProductDetailsParams.Product.newBuilder()
                     .setProductId(iap)
@@ -523,10 +523,10 @@ class BillingHelper(
     // get available sku based on SkuTypes based on skuInAppPurchases and skuSubscriptions availability
     private fun getAvailableTypes(): List<String> {
         return mutableListOf<String>().apply {
-            if (skuInAppPurchases.isNullOrEmpty().not()) {
+            if (productInAppPurchases.isNullOrEmpty().not()) {
                 add(BillingClient.ProductType.INAPP)
             }
-            if (skuSubscriptions.isNullOrEmpty().not()) {
+            if (productSubscriptions.isNullOrEmpty().not()) {
                 add(BillingClient.ProductType.SUBS)
             }
         }

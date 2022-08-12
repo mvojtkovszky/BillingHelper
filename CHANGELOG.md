@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.0.0 (TBD)
+* update Google billing client to 5.0.0 and adjust to all changes required to support it
+* bump Kotlin to 1.7.10, Gradle plugin to 7.2.2, core-ktx to 1.8.0
+
 ## 1.10.0 (2022-04-29)
 * update Google billing client to 4.1.0
 * bump Kotlin to 1.6.21, Serialization to 1.3.2, Gradle plugin to 7.1.3
