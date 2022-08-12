@@ -18,7 +18,7 @@ import com.android.billingclient.api.*
  * @param startConnectionImmediately set whether [initClientConnection] should be called automatically
  * when [BillingHelper] is initialized.
  * @param key app's license key. If provided, it will be used to verify purchase signatures.
- * @param querySkuDetailsOnConnected set whether [initQuerySkuDetails] should be called automatically
+ * @param querySkuDetailsOnConnected set whether [initQueryProductDetails] should be called automatically
  * right after client connects (when [initClientConnection] succeeds).
  * @param queryOwnedPurchasesOnConnected set whether [initQueryOwnedPurchases] should be called automatically
  * right after client connects (when [initClientConnection] succeeds).
@@ -50,7 +50,7 @@ class BillingHelper(
     // represents list of all currently owned purchases
     private val purchases = mutableListOf<Purchase>()
     // represents details of all available sku details
-    private val skuDetailsList = mutableListOf<SkuDetails>()
+    private val productDetailsList = mutableListOf<ProductDetails>()
     // callback listeners
     private val billingListeners = mutableListOf<BillingListener>()
 
@@ -76,12 +76,11 @@ class BillingHelper(
 
     /**
      * Determine if sku details have been successfully queried yet.
-     * That happens with successful completion of [initQuerySkuDetails].
+     * That happens with successful completion of [initQueryProductDetails].
      *
-     * Until sku details are queries any call to [launchPurchaseFlow] or
-     * [launchPriceChangeConfirmationFlow] will fail.
+     * Until sku details are queries any call to [launchPurchaseFlow] will fail.
      */
-    var skuDetailsQueried: Boolean = false
+    var productDetailsQueried: Boolean = false
         private set
 
     /**
@@ -183,27 +182,27 @@ class BillingHelper(
     }
 
     /**
-     * Will return a single [Purchase] object that contains a given [skuName] or null
+     * Will return a single [Purchase] object that contains a given [productName] or null
      * if no match found.
-     * Note that you need to query for owned purchases using [initQuerySkuDetails] or complete a
+     * Note that you need to query for owned purchases using [initQueryProductDetails] or complete a
      * purchase before, in order for this to be not null.
      */
-    fun getPurchaseWithSkuName(skuName: String): Purchase? {
+    fun getPurchaseWithProductName(productName: String): Purchase? {
         return try {
-            purchases.find { it.skus.contains(skuName) }
+            purchases.find { it.products.contains(productName) }
         } catch (e: Exception) {
             null
         }
     }
 
     /**
-     * Will return a single [SkuDetails] object with a given [skuName] or null if no match found.
+     * Will return a single [ProductDetails] object with a given [productName] or null if no match found.
      * Note that you need to query for sku details first using [initQueryOwnedPurchases] in order
      * for this not to be null.
      */
-    fun getSkuDetails(skuName: String): SkuDetails? {
+    fun getProductDetails(productName: String): ProductDetails? {
         return try {
-            skuDetailsList.find { it.sku == skuName }
+            productDetailsList.find { it.name == productName }
         } catch (e: Exception) {
             null
         }
@@ -212,8 +211,8 @@ class BillingHelper(
     /**
      * Determine whether product with given name has state set as purchased
      */
-    fun isPurchased(skuName: String): Boolean {
-        return getPurchaseWithSkuName(skuName)?.isPurchased() == true
+    fun isPurchased(productName: String): Boolean {
+        return getPurchaseWithProductName(productName)?.isPurchased() == true
     }
 
     /**
@@ -227,59 +226,45 @@ class BillingHelper(
     }
 
     /**
-     * Will start a purchase flow for given sku name.
+     * Will start a purchase flow for given product name.
      * Result will get back to [PurchasesUpdatedListener]
      */
     fun launchPurchaseFlow(activity: Activity,
-                           skuName: String,
-                           obfuscatedAccountId: String? = null,
-                           obfuscatedProfileId: String? = null,
-                           setVrPurchaseFlow: Boolean = false
+                           productName: String,
+                           selectedOfferIndex: Int? = null
     ) {
-        val skuDetailsToPurchase = getSkuDetails(skuName)
-        if (billingClient.isReady && skuDetailsToPurchase != null) {
-            val flowParams = BillingFlowParams.newBuilder().apply {
-                setSkuDetails(skuDetailsToPurchase)
-                obfuscatedAccountId?.let { setObfuscatedAccountId(it) }
-                obfuscatedProfileId?.let { setObfuscatedProfileId(it) }
-                setVrPurchaseFlow(setVrPurchaseFlow)
+        val productDetailsForPurchase = getProductDetails(productName)
+
+        if (billingClient.isReady && productDetailsForPurchase != null) {
+            val offerToken = selectedOfferIndex?.let {
+                productDetailsForPurchase.subscriptionOfferDetails?.get(it)?.offerToken
+            }
+
+            val productDetailsParams = BillingFlowParams.ProductDetailsParams.newBuilder().apply {
+                setProductDetails(productDetailsForPurchase)
+                offerToken?.let { setOfferToken(offerToken) }
             }.build()
-            // launch flow. Result will be passed to PurchasesUpdatedListener
-            billingClient.launchBillingFlow(activity, flowParams)
+
+            val billingFlowParams =
+                BillingFlowParams.newBuilder()
+                    .setProductDetailsParamsList(listOf(productDetailsParams))
+                    .build()
+
+            // Launch the billing flow
+            val result = billingClient.launchBillingFlow(activity, billingFlowParams)
+
+            // report failure
+            if (!result.isResponseOk()) {
+                invokeListener(
+                    event = BillingEvent.PURCHASE_FAILED,
+                    message = getPurchaseFlowErrorMessage(productName)
+                )
+            }
         } else {
             // report purchase flow error
             invokeListener(
                 event = BillingEvent.PURCHASE_FAILED,
-                message = getPurchaseFlowErrorMessage(skuName)
-            )
-        }
-    }
-
-    /**
-     * Will init and handle a call to [BillingClient.launchPriceChangeConfirmationFlow]
-     */
-    fun launchPriceChangeConfirmationFlow(activity: Activity, skuName: String) {
-        val skuDetailsForChange = getSkuDetails(skuName)
-        if (billingClient.isReady && skuDetailsForChange != null) {
-            val priceChangeFlowParams = PriceChangeFlowParams.Builder()
-                .setSkuDetails(skuDetailsForChange)
-                .build()
-            billingClient.launchPriceChangeConfirmationFlow(activity, priceChangeFlowParams) { billingResult ->
-                invokeListener(
-                    event = when {
-                        billingResult.isResponseOk() -> BillingEvent.PRICE_CHANGE_CONFIRMATION_SUCCESS
-                        billingResult.isResponseUserCancelled() -> BillingEvent.PRICE_CHANGE_CONFIRMATION_CANCELLED
-                        else -> BillingEvent.PRICE_CHANGE_CONFIRMATION_FAILED
-                    },
-                    message = billingResult.debugMessage,
-                    responseCode = billingResult.responseCode
-                )
-            }
-        } else {
-            // report error
-            invokeListener(
-                event = BillingEvent.PRICE_CHANGE_CONFIRMATION_FAILED,
-                message = getPurchaseFlowErrorMessage(skuName)
+                message = getPurchaseFlowErrorMessage(productName)
             )
         }
     }
@@ -288,7 +273,7 @@ class BillingHelper(
      * Will initiate [BillingClient.startConnection]. If client is already connected, process
      * will be skipped and [BillingEvent.BILLING_CONNECTED] will be invoked.
      *
-     * @param querySkuDetailsOnConnected set whether [initQuerySkuDetails] should be called
+     * @param querySkuDetailsOnConnected set whether [initQueryProductDetails] should be called
      * right after client connects. Defaults to [BillingHelper.querySkuDetailsOnConnected]
      * @param queryOwnedPurchasesOnConnected set whether [initQueryOwnedPurchases] should be called
      * right after client connects. Defaults to [BillingHelper.queryOwnedPurchasesOnConnected]
@@ -316,7 +301,7 @@ class BillingHelper(
                 if (billingResult.isResponseOk()) {
                     // query for sku details
                     if (querySkuDetailsOnConnected) {
-                        initQuerySkuDetails()
+                        initQueryProductDetails()
                     }
                     // query for owned purchases
                     if (queryOwnedPurchasesOnConnected) {
@@ -344,15 +329,52 @@ class BillingHelper(
     }
 
     /**
-     * Initialize query for [SkuDetails] listed for this app.
+     * Initialize query for [ProductDetails] listed for this app.
      * Will query for both in-app purchases and subscriptions.
      * Result will be returned using [billingListeners]
      *
      * Note if queryForSkuDetailsOnInit=true in the helper constructor, method gets called
      * automatically when client connects (See [BillingHelper] constructor for more info).
      */
-    fun initQuerySkuDetails() {
-        initQuerySkuDetailsForType(getAvailableTypes(), 0, mutableListOf())
+    fun initQueryProductDetails() {
+        val products = mutableListOf<QueryProductDetailsParams.Product>()
+
+        for (sub in skuSubscriptions.orEmpty()) {
+            products.add(
+                QueryProductDetailsParams.Product.newBuilder()
+                    .setProductId(sub)
+                    .setProductType(BillingClient.ProductType.SUBS)
+                    .build()
+            )
+        }
+
+        for (iap in skuSubscriptions.orEmpty()) {
+            products.add(
+                QueryProductDetailsParams.Product.newBuilder()
+                    .setProductId(iap)
+                    .setProductType(BillingClient.ProductType.INAPP)
+                    .build()
+            )
+        }
+
+        val params = QueryProductDetailsParams.newBuilder().setProductList(products)
+
+        billingClient.queryProductDetailsAsync(params.build()) { queryResult, productDetailsList ->
+
+            if (queryResult.isResponseOk()) {
+                this.productDetailsList.clear()
+                this.productDetailsList.addAll(productDetailsList)
+                this.productDetailsQueried = true
+                invokeListener(BillingEvent.QUERY_PRODUCT_DETAILS_COMPLETE)
+            }
+            else {
+                invokeListener(
+                    event = BillingEvent.QUERY_PRODUCT_DETAILS_FAILED,
+                    message = queryResult.debugMessage,
+                    responseCode = queryResult.responseCode
+                )
+            }
+        }
     }
 
     /**
@@ -455,46 +477,15 @@ class BillingHelper(
         }
         // query for type on current index
         else {
-            billingClient.queryPurchasesAsync(types[currentTypeIndex]) { queryResult, purchases ->
+            billingClient.queryPurchasesAsync(
+                QueryPurchasesParams.newBuilder().setProductType(types[currentTypeIndex]).build()
+            ) { queryResult, purchases ->
                 if (queryResult.isResponseOk()) {
                     resultingList.addAll(purchases)
                     initQueryOwnedPurchasesForType(types, currentTypeIndex+1, resultingList)
                 } else {
                     invokeListener(
                         event = BillingEvent.QUERY_OWNED_PURCHASES_FAILED,
-                        message = queryResult.debugMessage,
-                        responseCode = queryResult.responseCode
-                    )
-                }
-            }
-        }
-    }
-
-    // allows to call querySkuDetailsAsync recursively on all types
-    private fun initQuerySkuDetailsForType(types: List<String>,
-                                           currentTypeIndex: Int,
-                                           resultingList: MutableList<SkuDetails>) {
-        // handled all types
-        if (currentTypeIndex == types.size) {
-            this.skuDetailsList.clear()
-            this.skuDetailsList.addAll(resultingList)
-            this.skuDetailsQueried = true
-            invokeListener(BillingEvent.QUERY_SKU_DETAILS_COMPLETE)
-        }
-        // query for type on current index
-        else {
-            val currentType = types[currentTypeIndex]
-            val skuDetailsParams = SkuDetailsParams.newBuilder()
-                .setSkusList(getSkusForType(currentType))
-                .setType(currentType)
-                .build()
-            billingClient.querySkuDetailsAsync(skuDetailsParams) { queryResult, skuDetailsList ->
-                if (queryResult.isResponseOk()) {
-                    skuDetailsList?.let { resultingList.addAll(it) }
-                    initQuerySkuDetailsForType(types, currentTypeIndex+1, resultingList)
-                } else {
-                    invokeListener(
-                        event = BillingEvent.QUERY_SKU_DETAILS_FAILED,
                         message = queryResult.debugMessage,
                         responseCode = queryResult.responseCode
                     )
@@ -515,7 +506,7 @@ class BillingHelper(
                     it.add(purchase)
                     
                     if (enableLogging) {
-                        Log.d(TAG, "Owned purchase added: ${purchase.skus}")
+                        Log.d(TAG, "Owned purchase added: ${purchase.products}")
                     }
                 }
             }
@@ -524,23 +515,14 @@ class BillingHelper(
         this.purchases.addAll(newPurchases)
     }
 
-    // get available sku based on SkyType
-    private fun getSkusForType(@BillingClient.SkuType type: String): List<String> {
-        return when (type) {
-            BillingClient.SkuType.INAPP -> skuInAppPurchases.orEmpty()
-            BillingClient.SkuType.SUBS -> skuSubscriptions.orEmpty()
-            else -> emptyList()
-        }
-    }
-
     // get available sku based on SkuTypes based on skuInAppPurchases and skuSubscriptions availability
     private fun getAvailableTypes(): List<String> {
         return mutableListOf<String>().apply {
             if (skuInAppPurchases.isNullOrEmpty().not()) {
-                add(BillingClient.SkuType.INAPP)
+                add(BillingClient.ProductType.INAPP)
             }
             if (skuSubscriptions.isNullOrEmpty().not()) {
-                add(BillingClient.SkuType.SUBS)
+                add(BillingClient.ProductType.SUBS)
             }
         }
     }
@@ -556,7 +538,7 @@ class BillingHelper(
     private fun getPurchaseFlowErrorMessage(skuName: String): String {
         return when {
             !billingClient.isReady -> "Billing not ready."
-            !skuDetailsQueried -> "SKU details have not been queried yet."
+            !productDetailsQueried -> "SKU details have not been queried yet."
             else -> "skuName $skuName not recognized among sku details."
         }
     }

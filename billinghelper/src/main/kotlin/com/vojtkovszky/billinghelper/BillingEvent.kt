@@ -26,14 +26,14 @@ enum class BillingEvent {
     BILLING_DISCONNECTED,
 
     /**
-     * Success from [BillingClient.querySkuDetailsAsync]
+     * Success from [BillingClient.queryProductDetailsAsync]
      */
-    QUERY_SKU_DETAILS_COMPLETE,
+    QUERY_PRODUCT_DETAILS_COMPLETE,
 
     /**
-     * Failure from [BillingClient.querySkuDetailsAsync]
+     * Failure from [BillingClient.queryProductDetailsAsync]
      */
-    QUERY_SKU_DETAILS_FAILED,
+    QUERY_PRODUCT_DETAILS_FAILED,
 
     /**
      * Success from [BillingClient.queryPurchasesAsync]
@@ -78,22 +78,7 @@ enum class BillingEvent {
     /**
      * Failure from [BillingClient.consumeAsync]
      */
-    CONSUME_PURCHASE_FAILED,
-
-    /**
-     * Success from [BillingClient.launchPriceChangeConfirmationFlow]
-     */
-    PRICE_CHANGE_CONFIRMATION_SUCCESS,
-
-    /**
-     * User cancelled [BillingClient.launchPriceChangeConfirmationFlow]
-     */
-    PRICE_CHANGE_CONFIRMATION_CANCELLED,
-
-    /**
-     * Failure from [BillingClient.launchPriceChangeConfirmationFlow]
-     */
-    PRICE_CHANGE_CONFIRMATION_FAILED;
+    CONSUME_PURCHASE_FAILED;
     // endregion event types
 
     // region helpers
@@ -102,8 +87,8 @@ enum class BillingEvent {
      */
     val isFailure: Boolean
         get() = listOf(
-            BILLING_CONNECTION_FAILED, QUERY_SKU_DETAILS_FAILED, QUERY_OWNED_PURCHASES_FAILED,
-            PURCHASE_FAILED, CONSUME_PURCHASE_FAILED, PRICE_CHANGE_CONFIRMATION_FAILED
+            BILLING_CONNECTION_FAILED, QUERY_PRODUCT_DETAILS_FAILED, QUERY_OWNED_PURCHASES_FAILED,
+            PURCHASE_FAILED, CONSUME_PURCHASE_FAILED
         ).contains(this)
 
     /**
@@ -111,27 +96,26 @@ enum class BillingEvent {
      */
     val isSuccess: Boolean
         get() = listOf(
-            BILLING_CONNECTED, QUERY_SKU_DETAILS_COMPLETE, QUERY_OWNED_PURCHASES_COMPLETE,
-            PURCHASE_COMPLETE, PURCHASE_ACKNOWLEDGE_SUCCESS, CONSUME_PURCHASE_SUCCESS,
-            PRICE_CHANGE_CONFIRMATION_SUCCESS
+            BILLING_CONNECTED, QUERY_PRODUCT_DETAILS_COMPLETE, QUERY_OWNED_PURCHASES_COMPLETE,
+            PURCHASE_COMPLETE, PURCHASE_ACKNOWLEDGE_SUCCESS, CONSUME_PURCHASE_SUCCESS
         ).contains(this)
 
     /**
      * Is event a failure in an actively initialized flow, usually accompanied by a dialog. One of:
-     * [PURCHASE_FAILED], [PRICE_CHANGE_CONFIRMATION_FAILED]
+     * [PURCHASE_FAILED]
      */
     val isActiveActionFailure: Boolean
         get() = listOf(
-            PURCHASE_FAILED, PRICE_CHANGE_CONFIRMATION_FAILED
+            PURCHASE_FAILED
         ).contains(this)
 
     /**
      * Is event a success in an actively initialized flow, usually accompanied by a dialog. One of:
-     * [PURCHASE_COMPLETE], [PRICE_CHANGE_CONFIRMATION_SUCCESS]
+     * [PURCHASE_COMPLETE]
      */
     val isActiveActionSuccess: Boolean
         get() = listOf(
-            PURCHASE_COMPLETE, PRICE_CHANGE_CONFIRMATION_SUCCESS
+            PURCHASE_COMPLETE
         ).contains(this)
 
     /**
@@ -158,7 +142,7 @@ enum class BillingEvent {
      */
     val isQuerySkuDetailsFlow: Boolean
         get() = listOf(
-            QUERY_SKU_DETAILS_COMPLETE, QUERY_SKU_DETAILS_FAILED
+            QUERY_PRODUCT_DETAILS_COMPLETE, QUERY_PRODUCT_DETAILS_FAILED
         ).contains(this)
 
     /**
@@ -191,15 +175,6 @@ enum class BillingEvent {
     val isPurchaseAcknowledgeFlow: Boolean
         get() = listOf(
             PURCHASE_ACKNOWLEDGE_SUCCESS, PURCHASE_ACKNOWLEDGE_FAILED
-        ).contains(this)
-
-    /**
-     * Determine if event belongs to price change confirmation flow.
-     */
-    val isPriceChangeConfirmationFlow: Boolean
-        get() = listOf(
-            PRICE_CHANGE_CONFIRMATION_FAILED, PRICE_CHANGE_CONFIRMATION_CANCELLED,
-            PRICE_CHANGE_CONFIRMATION_SUCCESS
         ).contains(this)
     // endregion flow helpers
 }
