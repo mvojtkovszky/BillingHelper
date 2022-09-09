@@ -2,6 +2,7 @@
 
 ## 2.0.0 (TBD)
 * update Google billing client to 5.0.0 and adjust to all changes required to support it
+* renamed all references from "sku" to "product" to reflect Google's billing client naming conventions.
 * bump Kotlin to 1.7.10, Gradle plugin to 7.2.2, core-ktx to 1.8.0
 
 ## 1.10.0 (2022-04-29)

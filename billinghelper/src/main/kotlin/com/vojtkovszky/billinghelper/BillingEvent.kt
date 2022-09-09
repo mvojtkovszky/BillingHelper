@@ -138,9 +138,9 @@ enum class BillingEvent {
         ).contains(this)
 
     /**
-     * Determine if event belongs to query sku details flow.
+     * Determine if event belongs to query product details flow.
      */
-    val isQuerySkuDetailsFlow: Boolean
+    val isQueryProductDetailsFlow: Boolean
         get() = listOf(
             QUERY_PRODUCT_DETAILS_COMPLETE, QUERY_PRODUCT_DETAILS_FAILED
         ).contains(this)

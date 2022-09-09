@@ -1,6 +1,6 @@
 # BillingHelper
 Wrapper around Google Play Billing Library, simplifying its use. 
-Handles client connection, querying sku details, owned purchase, different purchase types, acknowledging purchases etc.
+Handles client connection, querying product details, owned purchase, different purchase types, acknowledging purchases etc.
 
 ## How does it work?
 Make sure your Activity/Fragment implements BillingListener and initializes BillingHelper
@@ -12,15 +12,15 @@ class MainActivity: AppCompatActivity(), BillingListener {
     override fun onCreate(savedInstanceState: Bundle?, persistentState: PersistableBundle?) {
         super.onCreate(savedInstanceState, persistentState)
 
-        // Construct helper - by default, connection will be initialized immediately with sku details and
-        // owned purchases queried. All events are reported via billingListener.
-        // At least one of skuInAppPurchases, skuSubscriptions is required.
+        // Construct helper - by default, connection will be initialized immediately with product details 
+        // and owned purchases queried. All events are reported via billingListener.
+        // At least one of productInAppPurchases or productSubscriptions is required.
         // For more configuration options, check BillingHelper constructor parameters.
         billing = BillingHelper(
-                context = this, 
-                skuInAppPurchases = listOf("inAppPurchaseSkuName1", "inAppPurchaseSkuName2"),
-                skuSubscriptions = listOf("subscriptionSkuName"),
-                billingListener = this
+            context = this, 
+            productInAppPurchases = listOf("inAppPurchaseSkuName1", "inAppPurchaseSkuName2"),
+            productSubscriptions = listOf("subscriptionSkuName"),
+            billingListener = this
         )
     }
 
@@ -40,26 +40,26 @@ class MainActivity: AppCompatActivity(), BillingListener {
 ``` kotlin
 fun consumePurchase(purchase: Purchase)
 fun endClientConnection()
-fun getPurchaseForSkuName(skuName: String): Purchase?
-fun getSkuDetails(skuName: String): SkuDetails?
-fun isPurchased(skuName: String): Boolean
-fun launchPurchaseFlow(activity: Activity, skuName: String)
-fun launchPriceChangeConfirmationFlow(activity: Activity, skuDetails: SkuDetails)
-fun initClientConnection(queryForSkuDetailsOnConnected: Boolean,queryForOwnedPurchasesOnConected: Boolean)
+fun getPurchaseForProductName(productName: String): Purchase?
+fun getProductDetails(productName: String): ProductDetails?
+fun isPurchased(productName: String): Boolean
+fun launchPurchaseFlow(activity: Activity, productName: String)
+fun launchPriceChangeConfirmationFlow(activity: Activity, productDetails: ProductDetails)
+fun initClientConnection(queryForProductDetailsOnConnected: Boolean, queryForOwnedPurchasesOnConected: Boolean)
 fun initQueryOwnedPurchases()
-fun initQuerySkuDetails()
+fun initQueryProductDetails()
 fun acknowledgePurchases(purchases: List<Purchase>)
 fun isFeatureSupported(feature: String)
 fun addBillingListener(listener: BillingListener)
 fun removeBillingListener(listener: BillingListener)
 
-var querySkuDetailsOnConnected: Boolean
+var queryProductDetailsOnConnected: Boolean
 var queryOwnedPurchasesOnConnected: Boolean
 var autoAcknowledgePurchases: Boolean
 val billingReady: Boolean
 val connectionState: Int
 val purchasesQueried: Boolean
-val skuDetailsQueried: Boolean
+val productDetailsQueried: Boolean
 val isConnectionFailure: Boolead
 val purchasesQueriedOrConnectionFailure: Boolean
 ```
@@ -70,8 +70,8 @@ enum class BillingEvent {
     BILLING_CONNECTED,
     BILLING_CONNECTION_FAILED,
     BILLING_DISCONNECTED,
-    QUERY_SKU_DETAILS_COMPLETE,
-    QUERY_SKU_DETAILS_FAILED,
+    QUERY_PRODUCT_DETAILS_COMPLETE,
+    QUERY_PRODUCT_DETAILS_FAILED,
     QUERY_OWNED_PURCHASES_COMPLETE,
     QUERY_OWNED_PURCHASES_FAILED,
     PURCHASE_COMPLETE,
@@ -80,10 +80,7 @@ enum class BillingEvent {
     PURCHASE_ACKNOWLEDGE_SUCCESS,
     PURCHASE_ACKNOWLEDGE_FAILED,
     CONSUME_PURCHASE_SUCCESS,
-    CONSUME_PURCHASE_FAILED,
-    PRICE_CHANGE_CONFIRMATION_SUCCESS,
-    PRICE_CHANGE_CONFIRMATION_CANCELLED,
-    PRICE_CHANGE_CONFIRMATION_FAILED
+    CONSUME_PURCHASE_FAILED
 }
 ```
 
