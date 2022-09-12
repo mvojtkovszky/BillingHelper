@@ -57,9 +57,9 @@ object PriceUtil {
     }
 
     private fun roundDigitString(digitValue: Double): String {
-        var priceValueString = "?"
-        if (digitValue > 1000.0) priceValueString = digitValue.roundToLong().toString()
-        else if (digitValue <= 1000.0) priceValueString = String.format("%.2f", digitValue)
+        val priceValueString =
+            if (digitValue > 1000.0) digitValue.roundToLong().toString() else
+                String.format("%.2f", digitValue)
         return priceValueString.replace(".", ",")
     }
 }
