@@ -13,6 +13,7 @@ import kotlin.math.roundToLong
  *
  * @param subscriptionOfferIndex index of [ProductDetails.getSubscriptionOfferDetails].
  * @param subscriptionPricingPhaseIndex index of [ProductDetails.SubscriptionOfferDetails.pricingPhases]
+ * @return formatted price or null on error
  */
 fun ProductDetails.getFormattedPrice(
     subscriptionOfferIndex: Int = 0,
@@ -20,13 +21,18 @@ fun ProductDetails.getFormattedPrice(
 ): String? {
     return if (isInAppPurchase()) {
         oneTimePurchaseOfferDetails?.formattedPrice
-    } else if (isSubscription()) {
-        subscriptionOfferDetails?.get(subscriptionOfferIndex)
-            ?.pricingPhases
-            ?.pricingPhaseList?.get(subscriptionPricingPhaseIndex)
-            ?.formattedPrice
-    } else {
-        ""
+    } else try {
+        if (isSubscription()) {
+            subscriptionOfferDetails?.getOrNull(subscriptionOfferIndex)
+                ?.pricingPhases
+                ?.pricingPhaseList?.getOrNull(subscriptionPricingPhaseIndex)
+                ?.formattedPrice
+        } else {
+            null
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
     }
 }
 
@@ -36,13 +42,12 @@ fun ProductDetails.getFormattedPrice(
  *
  * @param price formatted price input
  * @param divider divide the extracted price
- * @param defaultOnError string to return in case of error
+ * @return formatted divided price or null on error
  */
 fun convertFullPriceToDivided(
     price: String,
-    divider: Int,
-    defaultOnError: String = "?"
-): String {
+    divider: Int
+): String? {
     var fullPrice = price
     if (divider == 1) {
         return price
@@ -72,7 +77,7 @@ fun convertFullPriceToDivided(
         e.printStackTrace()
     }
 
-    return defaultOnError
+    return null
 }
 
 private fun roundDigitString(digitValue: Double): String {
