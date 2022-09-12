@@ -268,7 +268,8 @@ class BillingHelper(
             if (!result.isResponseOk()) {
                 invokeListener(
                     event = BillingEvent.PURCHASE_FAILED,
-                    message = getPurchaseFlowErrorMessage(productName)
+                    message = result.debugMessage,
+                    responseCode = result.responseCode
                 )
             }
         } else {
@@ -415,8 +416,8 @@ class BillingHelper(
         Handler(Looper.getMainLooper()).post {
             try {
                 if (enableLogging) {
-                    Log.d(TAG, "Listener invoked for " +
-                            "event $event, message: $message, responseCode: $responseCode")
+                    Log.d(TAG, "Listener invoked for event $event; message: \"$message\"; " +
+                            "responseCode: $responseCode")
                 }
 
                 billingListeners.forEach {
@@ -447,7 +448,10 @@ class BillingHelper(
             // mark as queried
             this.purchasesQueried = true
             // invoke callback
-            invokeListener(event = BillingEvent.QUERY_OWNED_PURCHASES_COMPLETE)
+            invokeListener(
+                event = BillingEvent.QUERY_OWNED_PURCHASES_COMPLETE,
+                message = resultingList.toString()
+            )
         }
         // query for type on current index
         else {
@@ -482,7 +486,10 @@ class BillingHelper(
             // mark as queried
             this.productDetailsQueried = true
             // invoke callback
-            invokeListener(event = BillingEvent.QUERY_PRODUCT_DETAILS_COMPLETE)
+            invokeListener(
+                event = BillingEvent.QUERY_PRODUCT_DETAILS_COMPLETE,
+                message = resultingList.toString()
+            )
         }
         // query for type on current index
         else {
