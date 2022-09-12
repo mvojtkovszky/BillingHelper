@@ -3,7 +3,12 @@ Wrapper around Google Play Billing Library, simplifying its use.
 Handles client connection, querying product details, owned purchase, different purchase types, acknowledging purchases etc.
 
 ## How does it work?
-Make sure your Activity/Fragment implements BillingListener and initializes BillingHelper
+Your app requires Billing permission in the manifest
+``` xml
+<uses-permission android:name="com.android.vending.BILLING" />
+```
+
+<br/>Make sure your Activity/Fragment implements BillingListener and initializes BillingHelper
 ``` kotlin
 class MainActivity: AppCompatActivity(), BillingListener {
 
