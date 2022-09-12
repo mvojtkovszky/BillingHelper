@@ -28,12 +28,12 @@ android {
 
 dependencies {
     /* https://developer.android.com/jetpack/androidx/releases/core */
-    implementation 'androidx.core:core-ktx:1.7.0'
+    implementation 'androidx.core:core-ktx:1.9.0'
     /*
     https://developer.android.com/google/play/billing/billing_library_overview
     https://developer.android.com/google/play/billing/release-notes
      */
-    api 'com.android.billingclient:billing-ktx:4.1.0'
+    api 'com.android.billingclient:billing-ktx:5.0.0'
 
     /* https://developer.android.com/jetpack/androidx/releases/test */
     testImplementation 'junit:junit:4.13.2'
