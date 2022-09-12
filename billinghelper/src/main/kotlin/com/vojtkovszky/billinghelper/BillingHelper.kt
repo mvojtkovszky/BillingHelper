@@ -202,7 +202,7 @@ class BillingHelper(
      */
     fun getProductDetails(productName: String): ProductDetails? {
         return try {
-            productDetailsList.find { it.name == productName }
+            productDetailsList.find { it.productId == productName }
         } catch (e: Exception) {
             null
         }
@@ -342,44 +342,7 @@ class BillingHelper(
      * automatically when client connects (See [BillingHelper] constructor for more info).
      */
     fun initQueryProductDetails() {
-        val products = mutableListOf<QueryProductDetailsParams.Product>()
-
-        for (sub in productSubscriptions.orEmpty()) {
-            products.add(
-                QueryProductDetailsParams.Product.newBuilder()
-                    .setProductId(sub)
-                    .setProductType(BillingClient.ProductType.SUBS)
-                    .build()
-            )
-        }
-
-        for (iap in productInAppPurchases.orEmpty()) {
-            products.add(
-                QueryProductDetailsParams.Product.newBuilder()
-                    .setProductId(iap)
-                    .setProductType(BillingClient.ProductType.INAPP)
-                    .build()
-            )
-        }
-
-        val params = QueryProductDetailsParams.newBuilder().setProductList(products)
-
-        billingClient.queryProductDetailsAsync(params.build()) { queryResult, productDetailsList ->
-
-            if (queryResult.isResponseOk()) {
-                this.productDetailsList.clear()
-                this.productDetailsList.addAll(productDetailsList)
-                this.productDetailsQueried = true
-                invokeListener(BillingEvent.QUERY_PRODUCT_DETAILS_COMPLETE)
-            }
-            else {
-                invokeListener(
-                    event = BillingEvent.QUERY_PRODUCT_DETAILS_FAILED,
-                    message = queryResult.debugMessage,
-                    responseCode = queryResult.responseCode
-                )
-            }
-        }
+        initQueryProductDetailsByType(getAvailableTypes(), 0, mutableListOf())
     }
 
     /**
@@ -491,6 +454,62 @@ class BillingHelper(
                 } else {
                     invokeListener(
                         event = BillingEvent.QUERY_OWNED_PURCHASES_FAILED,
+                        message = queryResult.debugMessage,
+                        responseCode = queryResult.responseCode
+                    )
+                }
+            }
+        }
+    }
+
+    // allows to call queryProductDetailsAsync recursively on all types
+    private fun initQueryProductDetailsByType(
+        types: List<String>,
+        currentTypeIndex: Int,
+        resultingList: MutableList<ProductDetails>) {
+
+        // handled all types
+        if (currentTypeIndex == types.size) {
+            // repopulate product details list
+            this.productDetailsList.clear()
+            this.productDetailsList.addAll(resultingList)
+            // mark as queried
+            this.productDetailsQueried = true
+            // invoke callback
+            invokeListener(event = BillingEvent.QUERY_PRODUCT_DETAILS_COMPLETE)
+        }
+        // query for type on current index
+        else {
+            val products = mutableListOf<QueryProductDetailsParams.Product>()
+            if (types[currentTypeIndex] == BillingClient.ProductType.SUBS) {
+                for (sub in productSubscriptions.orEmpty()) {
+                    products.add(
+                        QueryProductDetailsParams.Product.newBuilder()
+                            .setProductId(sub)
+                            .setProductType(BillingClient.ProductType.SUBS)
+                            .build()
+                    )
+                }
+            }
+            else if (types[currentTypeIndex] == BillingClient.ProductType.INAPP) {
+                for (iap in productInAppPurchases.orEmpty()) {
+                    products.add(
+                        QueryProductDetailsParams.Product.newBuilder()
+                            .setProductId(iap)
+                            .setProductType(BillingClient.ProductType.INAPP)
+                            .build()
+                    )
+                }
+            }
+
+            val params = QueryProductDetailsParams.newBuilder().setProductList(products)
+            billingClient.queryProductDetailsAsync(params.build()) { queryResult, productDetailsList ->
+                if (queryResult.isResponseOk()) {
+                    resultingList.addAll(productDetailsList)
+                    initQueryProductDetailsByType(types, currentTypeIndex+1, resultingList)
+                } else {
+                    invokeListener(
+                        event = BillingEvent.QUERY_PRODUCT_DETAILS_FAILED,
                         message = queryResult.debugMessage,
                         responseCode = queryResult.responseCode
                     )
