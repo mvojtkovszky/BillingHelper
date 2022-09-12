@@ -117,6 +117,7 @@ class BillingHelper(
         }
 
         Security.enableLogging = this.enableLogging
+        PriceUtil.enableLogging = this.enableLogging
 
         // add default listener, if present
         billingListener?.let { billingListeners.add(it) }
@@ -202,7 +203,7 @@ class BillingHelper(
      */
     fun getProductDetails(productName: String): ProductDetails? {
         return try {
-            productDetailsList.find { it.name == productName }
+            productDetailsList.find { it.productId == productName }
         } catch (e: Exception) {
             null
         }
@@ -228,24 +229,29 @@ class BillingHelper(
     /**
      * Will start a purchase flow for given product name.
      * Result will get back to [PurchasesUpdatedListener]
+     *
+     * @param selectedOfferIndex see [ProductDetails.SubscriptionOfferDetails]
      */
     fun launchPurchaseFlow(activity: Activity,
                            productName: String,
                            obfuscatedAccountId: String? = null,
                            obfuscatedProfileId: String? = null,
-                           selectedOfferIndex: Int? = null,
-                           isOfferPersonalized: Boolean? = null
+                           isOfferPersonalized: Boolean? = null,
+                           selectedOfferIndex: Int = 0
     ) {
         val productDetailsForPurchase = getProductDetails(productName)
 
         if (billingClient.isReady && productDetailsForPurchase != null) {
-            val offerToken = selectedOfferIndex?.let {
+            val offerToken = selectedOfferIndex.let {
                 productDetailsForPurchase.subscriptionOfferDetails?.get(it)?.offerToken
             }
 
             val productDetailsParams = BillingFlowParams.ProductDetailsParams.newBuilder().apply {
                 setProductDetails(productDetailsForPurchase)
-                offerToken?.let { setOfferToken(offerToken) }
+                // offer token required for subscriptions
+                if (productDetailsForPurchase.isSubscription()) {
+                    offerToken?.let { setOfferToken(offerToken) }
+                }
             }.build()
 
             val billingFlowParams = BillingFlowParams.newBuilder().apply {
@@ -262,7 +268,8 @@ class BillingHelper(
             if (!result.isResponseOk()) {
                 invokeListener(
                     event = BillingEvent.PURCHASE_FAILED,
-                    message = getPurchaseFlowErrorMessage(productName)
+                    message = result.debugMessage,
+                    responseCode = result.responseCode
                 )
             }
         } else {
@@ -342,44 +349,7 @@ class BillingHelper(
      * automatically when client connects (See [BillingHelper] constructor for more info).
      */
     fun initQueryProductDetails() {
-        val products = mutableListOf<QueryProductDetailsParams.Product>()
-
-        for (sub in productSubscriptions.orEmpty()) {
-            products.add(
-                QueryProductDetailsParams.Product.newBuilder()
-                    .setProductId(sub)
-                    .setProductType(BillingClient.ProductType.SUBS)
-                    .build()
-            )
-        }
-
-        for (iap in productInAppPurchases.orEmpty()) {
-            products.add(
-                QueryProductDetailsParams.Product.newBuilder()
-                    .setProductId(iap)
-                    .setProductType(BillingClient.ProductType.INAPP)
-                    .build()
-            )
-        }
-
-        val params = QueryProductDetailsParams.newBuilder().setProductList(products)
-
-        billingClient.queryProductDetailsAsync(params.build()) { queryResult, productDetailsList ->
-
-            if (queryResult.isResponseOk()) {
-                this.productDetailsList.clear()
-                this.productDetailsList.addAll(productDetailsList)
-                this.productDetailsQueried = true
-                invokeListener(BillingEvent.QUERY_PRODUCT_DETAILS_COMPLETE)
-            }
-            else {
-                invokeListener(
-                    event = BillingEvent.QUERY_PRODUCT_DETAILS_FAILED,
-                    message = queryResult.debugMessage,
-                    responseCode = queryResult.responseCode
-                )
-            }
-        }
+        initQueryProductDetailsByType(getAvailableTypes(), 0, mutableListOf())
     }
 
     /**
@@ -446,8 +416,8 @@ class BillingHelper(
         Handler(Looper.getMainLooper()).post {
             try {
                 if (enableLogging) {
-                    Log.d(TAG, "Listener invoked for " +
-                            "event $event, message: $message, responseCode: $responseCode")
+                    Log.d(TAG, "Listener invoked for event $event; message: \"$message\"; " +
+                            "responseCode: $responseCode")
                 }
 
                 billingListeners.forEach {
@@ -478,7 +448,10 @@ class BillingHelper(
             // mark as queried
             this.purchasesQueried = true
             // invoke callback
-            invokeListener(event = BillingEvent.QUERY_OWNED_PURCHASES_COMPLETE)
+            invokeListener(
+                event = BillingEvent.QUERY_OWNED_PURCHASES_COMPLETE,
+                message = resultingList.toString()
+            )
         }
         // query for type on current index
         else {
@@ -491,6 +464,65 @@ class BillingHelper(
                 } else {
                     invokeListener(
                         event = BillingEvent.QUERY_OWNED_PURCHASES_FAILED,
+                        message = queryResult.debugMessage,
+                        responseCode = queryResult.responseCode
+                    )
+                }
+            }
+        }
+    }
+
+    // allows to call queryProductDetailsAsync recursively on all types
+    private fun initQueryProductDetailsByType(
+        types: List<String>,
+        currentTypeIndex: Int,
+        resultingList: MutableList<ProductDetails>) {
+
+        // handled all types
+        if (currentTypeIndex == types.size) {
+            // repopulate product details list
+            this.productDetailsList.clear()
+            this.productDetailsList.addAll(resultingList)
+            // mark as queried
+            this.productDetailsQueried = true
+            // invoke callback
+            invokeListener(
+                event = BillingEvent.QUERY_PRODUCT_DETAILS_COMPLETE,
+                message = resultingList.toString()
+            )
+        }
+        // query for type on current index
+        else {
+            val products = mutableListOf<QueryProductDetailsParams.Product>()
+            if (types[currentTypeIndex] == BillingClient.ProductType.SUBS) {
+                for (sub in productSubscriptions.orEmpty()) {
+                    products.add(
+                        QueryProductDetailsParams.Product.newBuilder()
+                            .setProductId(sub)
+                            .setProductType(BillingClient.ProductType.SUBS)
+                            .build()
+                    )
+                }
+            }
+            else if (types[currentTypeIndex] == BillingClient.ProductType.INAPP) {
+                for (iap in productInAppPurchases.orEmpty()) {
+                    products.add(
+                        QueryProductDetailsParams.Product.newBuilder()
+                            .setProductId(iap)
+                            .setProductType(BillingClient.ProductType.INAPP)
+                            .build()
+                    )
+                }
+            }
+
+            val params = QueryProductDetailsParams.newBuilder().setProductList(products)
+            billingClient.queryProductDetailsAsync(params.build()) { queryResult, productDetailsList ->
+                if (queryResult.isResponseOk()) {
+                    resultingList.addAll(productDetailsList)
+                    initQueryProductDetailsByType(types, currentTypeIndex+1, resultingList)
+                } else {
+                    invokeListener(
+                        event = BillingEvent.QUERY_PRODUCT_DETAILS_FAILED,
                         message = queryResult.debugMessage,
                         responseCode = queryResult.responseCode
                     )
