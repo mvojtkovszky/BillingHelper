@@ -228,24 +228,29 @@ class BillingHelper(
     /**
      * Will start a purchase flow for given product name.
      * Result will get back to [PurchasesUpdatedListener]
+     *
+     * @param selectedOfferIndex see [ProductDetails.SubscriptionOfferDetails]
      */
     fun launchPurchaseFlow(activity: Activity,
                            productName: String,
                            obfuscatedAccountId: String? = null,
                            obfuscatedProfileId: String? = null,
-                           selectedOfferIndex: Int? = null,
-                           isOfferPersonalized: Boolean? = null
+                           isOfferPersonalized: Boolean? = null,
+                           selectedOfferIndex: Int = 0
     ) {
         val productDetailsForPurchase = getProductDetails(productName)
 
         if (billingClient.isReady && productDetailsForPurchase != null) {
-            val offerToken = selectedOfferIndex?.let {
+            val offerToken = selectedOfferIndex.let {
                 productDetailsForPurchase.subscriptionOfferDetails?.get(it)?.offerToken
             }
 
             val productDetailsParams = BillingFlowParams.ProductDetailsParams.newBuilder().apply {
                 setProductDetails(productDetailsForPurchase)
-                offerToken?.let { setOfferToken(offerToken) }
+                // offer token required for subscriptions
+                if (productDetailsForPurchase.isSubscription()) {
+                    offerToken?.let { setOfferToken(offerToken) }
+                }
             }.build()
 
             val billingFlowParams = BillingFlowParams.newBuilder().apply {
