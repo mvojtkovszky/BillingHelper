@@ -117,6 +117,7 @@ class BillingHelper(
         }
 
         Security.enableLogging = this.enableLogging
+        PriceUtil.enableLogging = this.enableLogging
 
         // add default listener, if present
         billingListener?.let { billingListeners.add(it) }
