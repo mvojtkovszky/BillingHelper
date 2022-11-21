@@ -1,7 +1,8 @@
 # CHANGELOG
 
-## 2.0.1 (TBD)
-*
+## 2.1.0 (2022-11-21)
+* update Google billing client to 5.1.0
+* bump Kotlin to 1.7.20
 
 ## 2.0.0 (2022-09-12)
 * update Google billing client to 5.0.0 and adjust to all changes required to support it
