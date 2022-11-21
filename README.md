@@ -1,14 +1,10 @@
 # BillingHelper
-Wrapper around Google Play Billing Library, simplifying its use. 
-Handles client connection, querying product details, owned purchase, different purchase types, acknowledging purchases etc.
+Wrapper around Google Play Billing Library (v5.1), simplifying its use. 
+Handles client connection, querying product details, owned purchases, different purchase types, 
+acknowledging purchases, verify purchase signatures etc.
 
 ## How does it work?
-Your app requires Billing permission in the manifest
-``` xml
-<uses-permission android:name="com.android.vending.BILLING" />
-```
-
-<br/>Make sure your Activity/Fragment implements BillingListener and initializes BillingHelper
+Make sure your `Activity`/`Fragment` implements `BillingListener` and initializes `BillingHelper`
 ``` kotlin
 class MainActivity: AppCompatActivity(), BillingListener {
 
@@ -17,8 +13,8 @@ class MainActivity: AppCompatActivity(), BillingListener {
     override fun onCreate(savedInstanceState: Bundle?, persistentState: PersistableBundle?) {
         super.onCreate(savedInstanceState, persistentState)
 
-        // Construct helper - by default, connection will be initialized immediately with product details 
-        // and owned purchases queried. All events are reported via billingListener.
+        // Construct helper - by default, connection will be initialized immediately with product 
+        // details and owned purchases queried. All events are reported via billingListener.
         // At least one of productInAppPurchases or productSubscriptions is required.
         // For more configuration options, check BillingHelper constructor parameters.
         billing = BillingHelper(
@@ -41,7 +37,7 @@ class MainActivity: AppCompatActivity(), BillingListener {
 }
 ```
 
-<br/>Use any of its public methods or attributes, BillingHelper will do all the heavy lifting and always report changes via BillingListener
+<br/>Use any of its public methods or attributes, `BillingHelper` will do all the heavy lifting and always report changes via `BillingListener`
 ``` kotlin
 fun consumePurchase(purchase: Purchase)
 fun endClientConnection()
@@ -49,7 +45,6 @@ fun getPurchaseForProductName(productName: String): Purchase?
 fun getProductDetails(productName: String): ProductDetails?
 fun isPurchased(productName: String): Boolean
 fun launchPurchaseFlow(activity: Activity, productName: String)
-fun launchPriceChangeConfirmationFlow(activity: Activity, productDetails: ProductDetails)
 fun initClientConnection(queryForProductDetailsOnConnected: Boolean, queryForOwnedPurchasesOnConected: Boolean)
 fun initQueryOwnedPurchases()
 fun initQueryProductDetails()
@@ -58,18 +53,23 @@ fun isFeatureSupported(feature: String)
 fun addBillingListener(listener: BillingListener)
 fun removeBillingListener(listener: BillingListener)
 
-var queryProductDetailsOnConnected: Boolean
+var querySkuDetailsOnConnected: Boolean
 var queryOwnedPurchasesOnConnected: Boolean
 var autoAcknowledgePurchases: Boolean
+var enableLogging: Boolean
+
 val billingReady: Boolean
 val connectionState: Int
-val purchasesQueried: Boolean
-val productDetailsQueried: Boolean
-val isConnectionFailure: Boolead
-val purchasesQueriedOrConnectionFailure: Boolean
+var purchasesQueried: Boolean
+    private set
+var productDetailsQueried: Boolean
+    private set
+var isConnectionFailure: Boolead 
+    private set
+val purchasesPresentable: Boolean
 ```
 
-<br/>BillingEvent includes all of the things you might be interested in, served via BillingListener 
+<br/>`BillingEvent` includes all of the things you might be interested in, served via `BillingListener`
 ``` kotlin
 enum class BillingEvent {
     BILLING_CONNECTED,
