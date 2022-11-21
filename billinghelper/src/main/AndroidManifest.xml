@@ -1,1 +1,6 @@
-<manifest package="com.example.billinghelper" />
+<manifest package="com.example.billinghelper"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="com.android.vending.BILLING" />
+
+</manifest>
