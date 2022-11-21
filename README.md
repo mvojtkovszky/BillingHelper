@@ -1,5 +1,5 @@
 # BillingHelper
-Wrapper around Google Play Billing Library, simplifying its use. 
+Wrapper around Google Play Billing Library (v5.1), simplifying its use. 
 Handles client connection, querying product details, owned purchases, different purchase types, 
 acknowledging purchases, verify purchase signatures etc.
 
