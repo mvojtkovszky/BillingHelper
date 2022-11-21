@@ -1,6 +1,7 @@
 # BillingHelper
 Wrapper around Google Play Billing Library, simplifying its use. 
-Handles client connection, querying product details, owned purchase, different purchase types, acknowledging purchases, verify purchase signatures etc.
+Handles client connection, querying product details, owned purchases, different purchase types, 
+acknowledging purchases, verify purchase signatures etc.
 
 ## How does it work?
 Make sure your `Activity`/`Fragment` implements `BillingListener` and initializes `BillingHelper`
