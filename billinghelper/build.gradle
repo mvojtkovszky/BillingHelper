@@ -9,6 +9,8 @@ android {
     compileSdkVersion project.properties['compileSdkVersion'] as Integer
     buildToolsVersion project.properties['buildToolsVersion'] as String
 
+    namespace 'com.vojtkovszky.billinghelper'
+
     defaultConfig {
         minSdkVersion project.properties['minSdkVersion'] as Integer
         targetSdkVersion project.properties['targetSdkVersion'] as Integer
@@ -17,6 +19,15 @@ android {
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
+    }
+
+    compileOptions {
+        sourceCompatibility project.properties['javaVersion']
+        targetCompatibility project.properties['javaVersion']
+    }
+
+    kotlinOptions {
+        jvmTarget=project.properties['javaVersion']
     }
 
     buildTypes {
@@ -28,17 +39,17 @@ android {
 
 dependencies {
     /* https://developer.android.com/jetpack/androidx/releases/core */
-    implementation 'androidx.core:core-ktx:1.9.0'
+    implementation 'androidx.core:core-ktx:1.10.1'
     /*
     https://developer.android.com/google/play/billing/billing_library_overview
     https://developer.android.com/google/play/billing/release-notes
      */
-    api 'com.android.billingclient:billing-ktx:5.1.0'
+    api 'com.android.billingclient:billing-ktx:6.0.1'
 
     /* https://developer.android.com/jetpack/androidx/releases/test */
     testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.4'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.0'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 }
 
 apply from: "$rootDir/gradle-mvn-push.gradle"
