@@ -1,5 +1,5 @@
 # BillingHelper
-Wrapper around Google Play Billing Library (v5.1), simplifying its use. 
+Wrapper around Google Play Billing Library (v6.0.1), simplifying its use. 
 Handles client connection, querying product details, owned purchases, different purchase types, 
 acknowledging purchases, verify purchase signatures etc.
 
@@ -88,6 +88,14 @@ enum class BillingEvent {
     CONSUME_PURCHASE_FAILED
 }
 ```
+
+## Best practices
+Since library caches latest state of products and purchases as they are known to an instance based 
+on the data requested, it's suggested to rely on a **single instance** of BillingHelper in your app.
+<br/>
+Otherwise you may need to check for the latest information before using the purchased items or 
+item details (manually handle the Optimistic Concurrency Control).
+
 
 ## Great! How do I get started?
 Make sure root build.gradle repositories include JitPack
