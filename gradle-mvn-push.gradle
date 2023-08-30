@@ -1,51 +1,21 @@
 apply plugin: 'maven-publish'
 
-def isReleaseBuild() {
-    return !project.properties['version'].contains("SNAPSHOT")
-}
-
-def getArtifactFilePath() {
-    return "$buildDir/outputs/aar/${project.properties['moduleId']}-${getPublicationName()}.aar"
-}
-
-def getPublicationName() {
-    if (isReleaseBuild()) {
-        return "release"
-    } else {
-        return "debug"
-    }
-}
-
-task javadocJar(type: Jar, dependsOn: dokkaJavadoc) {
+tasks.register('javadocJar', Jar) {
+    dependsOn dokkaJavadoc
     archiveClassifier.set('javadoc')
     from "$buildDir/dokka/javadoc"
 }
 
-task sourcesJar(type: Jar) {
-    archiveClassifier.set('sources')
-    from android.sourceSets.main.java.srcDirs
-}
-
-publishing {
-    publications {
-        "${getPublicationName()}" (MavenPublication) {
-            groupId project.properties['groupId']
-            artifactId project.properties['artifactId']
-            version project.properties['versionName']
-            artifact getArtifactFilePath()
-            artifact javadocJar
-            artifact sourcesJar
-
-            // include project dependencies
-            pom.withXml {
-                def dependencies = asNode().appendNode('dependencies')
-                configurations.getByName("${getPublicationName()}CompileClasspath")
-                        .getResolvedConfiguration().getFirstLevelModuleDependencies().each {
-                    def dependency = dependencies.appendNode('dependency')
-                    dependency.appendNode('groupId', it.moduleGroup)
-                    dependency.appendNode('artifactId', it.moduleName)
-                    dependency.appendNode('version', it.moduleVersion)
-                }
+afterEvaluate {
+    publishing {
+        publications {
+            // Creates a Maven publication called "release".
+            release(MavenPublication) {
+                from components.release
+                groupId project.properties['groupId']
+                artifactId project.properties['artifactId']
+                version project.properties['versionName']
+                artifact javadocJar
             }
         }
     }
@@ -53,5 +23,4 @@ publishing {
 
 artifacts {
     archives javadocJar
-    archives sourcesJar
 }
