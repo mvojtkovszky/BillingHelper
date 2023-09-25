@@ -154,7 +154,7 @@ class BillingHelper(
     }
 
     /**
-     * Consume a purchase.
+     * Consume a [purchase].
      * Will init and handle a call to [BillingClient.consumeAsync]
      */
     fun consumePurchase(purchase: Purchase) {
@@ -219,9 +219,9 @@ class BillingHelper(
     /**
      * Determine if at least one product among given names has state set as purchased
      */
-    fun isPurchasedAnyOf(vararg skuNames: String): Boolean {
-        for (skuName in skuNames) {
-            if (isPurchased(skuName)) return true
+    fun isPurchasedAnyOf(vararg productNames: String): Boolean {
+        for (productName in productNames) {
+            if (isPurchased(productName)) return true
         }
         return false
     }
@@ -230,6 +230,11 @@ class BillingHelper(
      * Will start a purchase flow for given product name.
      * Result will get back to [PurchasesUpdatedListener]
      *
+     * @param activity An activity reference from which the billing flow will be launched.
+     * @param productName name for the IAP or Subscription we intent to purchase.
+     * @param obfuscatedAccountId see [setObfuscatedAccountId](https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.Builder#setObfuscatedAccountId(java.lang.String))
+     * @param obfuscatedProfileId see [setObfuscatedProfileId](https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.Builder#setObfuscatedProfileId(java.lang.String))
+     * @param isOfferPersonalized see [setIsOfferPersonalized](https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.Builder#setIsOfferPersonalized(boolean))
      * @param selectedOfferIndex see [ProductDetails.SubscriptionOfferDetails]
      */
     fun launchPurchaseFlow(activity: Activity,
@@ -337,7 +342,7 @@ class BillingHelper(
      * automatically when client connects (See [BillingHelper] constructor for more info).
      */
     fun initQueryOwnedPurchases() {
-        initQueryOwnedPurchasesForType(getAvailableTypes(), 0, mutableListOf())
+        initQueryOwnedPurchasesForTypes(getAvailableTypes(), 0, mutableListOf())
     }
 
     /**
@@ -349,7 +354,7 @@ class BillingHelper(
      * automatically when client connects (See [BillingHelper] constructor for more info).
      */
     fun initQueryProductDetails() {
-        initQueryProductDetailsByType(getAvailableTypes(), 0, mutableListOf())
+        initQueryProductDetailsForTypes(getAvailableTypes(), 0, mutableListOf())
     }
 
     /**
@@ -432,9 +437,11 @@ class BillingHelper(
 
     // region Private Methods
     // allows to call queryPurchasesAsync recursively on all types
-    private fun initQueryOwnedPurchasesForType(types: List<String>,
-                                               currentTypeIndex: Int,
-                                               resultingList: MutableList<Purchase>) {
+    private fun initQueryOwnedPurchasesForTypes(
+        types: List<String>,
+        currentTypeIndex: Int,
+        resultingList: MutableList<Purchase>) {
+
         // handled all types
         if (currentTypeIndex == types.size) {
             // repopulate purchases
@@ -460,7 +467,7 @@ class BillingHelper(
             ) { queryResult, purchases ->
                 if (queryResult.isResponseOk()) {
                     resultingList.addAll(purchases)
-                    initQueryOwnedPurchasesForType(types, currentTypeIndex+1, resultingList)
+                    initQueryOwnedPurchasesForTypes(types, currentTypeIndex+1, resultingList)
                 } else {
                     invokeListener(
                         event = BillingEvent.QUERY_OWNED_PURCHASES_FAILED,
@@ -473,7 +480,7 @@ class BillingHelper(
     }
 
     // allows to call queryProductDetailsAsync recursively on all types
-    private fun initQueryProductDetailsByType(
+    private fun initQueryProductDetailsForTypes(
         types: List<String>,
         currentTypeIndex: Int,
         resultingList: MutableList<ProductDetails>) {
@@ -519,7 +526,7 @@ class BillingHelper(
             billingClient.queryProductDetailsAsync(params.build()) { queryResult, productDetailsList ->
                 if (queryResult.isResponseOk()) {
                     resultingList.addAll(productDetailsList)
-                    initQueryProductDetailsByType(types, currentTypeIndex+1, resultingList)
+                    initQueryProductDetailsForTypes(types, currentTypeIndex+1, resultingList)
                 } else {
                     invokeListener(
                         event = BillingEvent.QUERY_PRODUCT_DETAILS_FAILED,
@@ -572,11 +579,11 @@ class BillingHelper(
 
     // figure out what's wrong when trying to initialize purchase, because it fails due to
     // predictable reasons
-    private fun getPurchaseFlowErrorMessage(skuName: String): String {
+    private fun getPurchaseFlowErrorMessage(productName: String): String {
         return when {
             !billingClient.isReady -> "Billing not ready."
             !productDetailsQueried -> "SKU details have not been queried yet."
-            else -> "skuName $skuName not recognized among sku details."
+            else -> "productName $productName not recognized among product details."
         }
     }
     // endregion Private Methods

@@ -1,7 +1,9 @@
 # CHANGELOG
 
 ## 2.2.2 (TBD)
-* 
+* rename param from "skuNames" to "productNames" for `BillingHelper.isPurchasedAnyOf`
+* fix documentation and readme description
+* bump kotlin to 1.9.10, core-ktx to 1.12.0
 
 ## 2.2.1 (2023-08-30)
 * update Google billing client to 6.0.1
