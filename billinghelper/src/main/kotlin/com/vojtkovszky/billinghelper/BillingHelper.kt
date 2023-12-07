@@ -13,8 +13,8 @@ import com.android.billingclient.api.*
  * This convenience flow can be omitted by tweaking constructor parameters.
  *
  * @param context required to build [BillingClient].
- * @param productInAppPurchases list of sku names of in app purchases supported by the app.
- * @param productSubscriptions list of sku names of subscriptions supported by the app.
+ * @param productInAppPurchases list of product names of in app purchases supported by the app.
+ * @param productSubscriptions list of product names of subscriptions supported by the app.
  * @param startConnectionImmediately set whether [initClientConnection] should be called automatically
  * when [BillingHelper] is initialized.
  * @param key app's license key. If provided, it will be used to verify purchase signatures.
@@ -445,7 +445,8 @@ class BillingHelper(
 
         // handled all types
         if (currentTypeIndex == types.size) {
-            // repopulate purchases
+            // repopulate purchases, clear first
+            this.purchases.clear()
             for (purchase in resultingList) {
                 addOrUpdatePurchase(purchase)
             }
@@ -463,8 +464,9 @@ class BillingHelper(
         }
         // query for type on current index
         else {
+            val currentType = types[currentTypeIndex]
             billingClient.queryPurchasesAsync(
-                QueryPurchasesParams.newBuilder().setProductType(types[currentTypeIndex]).build()
+                QueryPurchasesParams.newBuilder().setProductType(currentType).build()
             ) { queryResult, purchases ->
                 if (queryResult.isResponseOk()) {
                     resultingList.addAll(purchases)
@@ -501,26 +503,16 @@ class BillingHelper(
         }
         // query for type on current index
         else {
+            val currentType = types[currentTypeIndex]
+
             val products = mutableListOf<QueryProductDetailsParams.Product>()
-            if (types[currentTypeIndex] == BillingClient.ProductType.SUBS) {
-                for (sub in productSubscriptions.orEmpty()) {
-                    products.add(
-                        QueryProductDetailsParams.Product.newBuilder()
-                            .setProductId(sub)
-                            .setProductType(BillingClient.ProductType.SUBS)
-                            .build()
-                    )
-                }
-            }
-            else if (types[currentTypeIndex] == BillingClient.ProductType.INAPP) {
-                for (iap in productInAppPurchases.orEmpty()) {
-                    products.add(
-                        QueryProductDetailsParams.Product.newBuilder()
-                            .setProductId(iap)
-                            .setProductType(BillingClient.ProductType.INAPP)
-                            .build()
-                    )
-                }
+            for (productName in getProductNamesForType(currentType)) {
+                products.add(
+                    QueryProductDetailsParams.Product.newBuilder()
+                        .setProductId(productName)
+                        .setProductType(currentType)
+                        .build()
+                )
             }
 
             val params = QueryProductDetailsParams.newBuilder().setProductList(products)
@@ -542,11 +534,12 @@ class BillingHelper(
     // purchases list repopulate and handle logic of acknowledge check and init
     @Synchronized
     private fun addOrUpdatePurchase(purchase: Purchase) {
+        // take existing purchases excluding new/updated purchase and re-add it only if signature is valid
+        // the resulting list is then all existing purchases + new/updated
         val newPurchases = this.purchases
             .filter { it.orderId != purchase.orderId }
             .toMutableList()
             .also {
-                // only include it if signature is valid
                 if (isSignatureValid(purchase)) {
                     it.add(purchase)
                     
@@ -569,6 +562,15 @@ class BillingHelper(
             if (productSubscriptions.isNullOrEmpty().not()) {
                 add(BillingClient.ProductType.SUBS)
             }
+        }
+    }
+
+    // retrieve product names from the given product type
+    private fun getProductNamesForType(productType: String): List<String> {
+        return when(productType) {
+            BillingClient.ProductType.INAPP -> productInAppPurchases.orEmpty()
+            BillingClient.ProductType.SUBS -> productSubscriptions.orEmpty()
+            else -> emptyList()
         }
     }
 

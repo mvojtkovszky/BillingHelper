@@ -1,9 +1,11 @@
 # CHANGELOG
 
-## 2.2.2 (TBD)
+## 2.3.0 (2023-12-07)
 * rename param from "skuNames" to "productNames" for `BillingHelper.isPurchasedAnyOf`
+* fix issue where purchase will still be present even if not included in the result from additional call to `BillingHelper.initQueryOwnedPurchases`
 * fix documentation and readme description
-* bump kotlin to 1.9.10, core-ktx to 1.12.0
+* bump Google Billing to 6.1.0 (note: support for alternative billing still not directly included in this release)
+* bump kotlin to 1.9.10, core-ktx to 1.12.0, Gradle plugin to 8.1.4
 
 ## 2.2.1 (2023-08-30)
 * update Google billing client to 6.0.1
