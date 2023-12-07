@@ -64,7 +64,7 @@ var purchasesQueried: Boolean
     private set
 var productDetailsQueried: Boolean
     private set
-var isConnectionFailure: Boolead 
+var isConnectionFailure: Boolean
     private set
 val purchasesPresentable: Boolean
 ```

@@ -13,8 +13,8 @@ import com.android.billingclient.api.*
  * This convenience flow can be omitted by tweaking constructor parameters.
  *
  * @param context required to build [BillingClient].
- * @param productInAppPurchases list of sku names of in app purchases supported by the app.
- * @param productSubscriptions list of sku names of subscriptions supported by the app.
+ * @param productInAppPurchases list of product names of in app purchases supported by the app.
+ * @param productSubscriptions list of product names of subscriptions supported by the app.
  * @param startConnectionImmediately set whether [initClientConnection] should be called automatically
  * when [BillingHelper] is initialized.
  * @param key app's license key. If provided, it will be used to verify purchase signatures.
@@ -144,7 +144,8 @@ class BillingHelper(
                 }
                 // send callback complete
                 invokeListener(billingEvent, billingResult.debugMessage, billingResult.responseCode)
-            }.build()
+            }
+            .build()
 
         // immediately connect client, if allowed so, and pass our preferences for pending queries
         // once client connects
@@ -154,7 +155,7 @@ class BillingHelper(
     }
 
     /**
-     * Consume a purchase.
+     * Consume a [purchase].
      * Will init and handle a call to [BillingClient.consumeAsync]
      */
     fun consumePurchase(purchase: Purchase) {
@@ -219,9 +220,9 @@ class BillingHelper(
     /**
      * Determine if at least one product among given names has state set as purchased
      */
-    fun isPurchasedAnyOf(vararg skuNames: String): Boolean {
-        for (skuName in skuNames) {
-            if (isPurchased(skuName)) return true
+    fun isPurchasedAnyOf(vararg productNames: String): Boolean {
+        for (productName in productNames) {
+            if (isPurchased(productName)) return true
         }
         return false
     }
@@ -230,6 +231,11 @@ class BillingHelper(
      * Will start a purchase flow for given product name.
      * Result will get back to [PurchasesUpdatedListener]
      *
+     * @param activity An activity reference from which the billing flow will be launched.
+     * @param productName name for the IAP or Subscription we intent to purchase.
+     * @param obfuscatedAccountId see [setObfuscatedAccountId](https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.Builder#setObfuscatedAccountId(java.lang.String))
+     * @param obfuscatedProfileId see [setObfuscatedProfileId](https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.Builder#setObfuscatedProfileId(java.lang.String))
+     * @param isOfferPersonalized see [setIsOfferPersonalized](https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.Builder#setIsOfferPersonalized(boolean))
      * @param selectedOfferIndex see [ProductDetails.SubscriptionOfferDetails]
      */
     fun launchPurchaseFlow(activity: Activity,
@@ -337,7 +343,7 @@ class BillingHelper(
      * automatically when client connects (See [BillingHelper] constructor for more info).
      */
     fun initQueryOwnedPurchases() {
-        initQueryOwnedPurchasesForType(getAvailableTypes(), 0, mutableListOf())
+        initQueryOwnedPurchasesForTypes(getAvailableTypes(), 0, mutableListOf())
     }
 
     /**
@@ -349,7 +355,7 @@ class BillingHelper(
      * automatically when client connects (See [BillingHelper] constructor for more info).
      */
     fun initQueryProductDetails() {
-        initQueryProductDetailsByType(getAvailableTypes(), 0, mutableListOf())
+        initQueryProductDetailsForTypes(getAvailableTypes(), 0, mutableListOf())
     }
 
     /**
@@ -432,12 +438,15 @@ class BillingHelper(
 
     // region Private Methods
     // allows to call queryPurchasesAsync recursively on all types
-    private fun initQueryOwnedPurchasesForType(types: List<String>,
-                                               currentTypeIndex: Int,
-                                               resultingList: MutableList<Purchase>) {
+    private fun initQueryOwnedPurchasesForTypes(
+        types: List<String>,
+        currentTypeIndex: Int,
+        resultingList: MutableList<Purchase>) {
+
         // handled all types
         if (currentTypeIndex == types.size) {
-            // repopulate purchases
+            // repopulate purchases, clear first
+            this.purchases.clear()
             for (purchase in resultingList) {
                 addOrUpdatePurchase(purchase)
             }
@@ -455,12 +464,13 @@ class BillingHelper(
         }
         // query for type on current index
         else {
+            val currentType = types[currentTypeIndex]
             billingClient.queryPurchasesAsync(
-                QueryPurchasesParams.newBuilder().setProductType(types[currentTypeIndex]).build()
+                QueryPurchasesParams.newBuilder().setProductType(currentType).build()
             ) { queryResult, purchases ->
                 if (queryResult.isResponseOk()) {
                     resultingList.addAll(purchases)
-                    initQueryOwnedPurchasesForType(types, currentTypeIndex+1, resultingList)
+                    initQueryOwnedPurchasesForTypes(types, currentTypeIndex+1, resultingList)
                 } else {
                     invokeListener(
                         event = BillingEvent.QUERY_OWNED_PURCHASES_FAILED,
@@ -473,7 +483,7 @@ class BillingHelper(
     }
 
     // allows to call queryProductDetailsAsync recursively on all types
-    private fun initQueryProductDetailsByType(
+    private fun initQueryProductDetailsForTypes(
         types: List<String>,
         currentTypeIndex: Int,
         resultingList: MutableList<ProductDetails>) {
@@ -493,33 +503,23 @@ class BillingHelper(
         }
         // query for type on current index
         else {
+            val currentType = types[currentTypeIndex]
+
             val products = mutableListOf<QueryProductDetailsParams.Product>()
-            if (types[currentTypeIndex] == BillingClient.ProductType.SUBS) {
-                for (sub in productSubscriptions.orEmpty()) {
-                    products.add(
-                        QueryProductDetailsParams.Product.newBuilder()
-                            .setProductId(sub)
-                            .setProductType(BillingClient.ProductType.SUBS)
-                            .build()
-                    )
-                }
-            }
-            else if (types[currentTypeIndex] == BillingClient.ProductType.INAPP) {
-                for (iap in productInAppPurchases.orEmpty()) {
-                    products.add(
-                        QueryProductDetailsParams.Product.newBuilder()
-                            .setProductId(iap)
-                            .setProductType(BillingClient.ProductType.INAPP)
-                            .build()
-                    )
-                }
+            for (productName in getProductNamesForType(currentType)) {
+                products.add(
+                    QueryProductDetailsParams.Product.newBuilder()
+                        .setProductId(productName)
+                        .setProductType(currentType)
+                        .build()
+                )
             }
 
             val params = QueryProductDetailsParams.newBuilder().setProductList(products)
             billingClient.queryProductDetailsAsync(params.build()) { queryResult, productDetailsList ->
                 if (queryResult.isResponseOk()) {
                     resultingList.addAll(productDetailsList)
-                    initQueryProductDetailsByType(types, currentTypeIndex+1, resultingList)
+                    initQueryProductDetailsForTypes(types, currentTypeIndex+1, resultingList)
                 } else {
                     invokeListener(
                         event = BillingEvent.QUERY_PRODUCT_DETAILS_FAILED,
@@ -534,11 +534,12 @@ class BillingHelper(
     // purchases list repopulate and handle logic of acknowledge check and init
     @Synchronized
     private fun addOrUpdatePurchase(purchase: Purchase) {
+        // take existing purchases excluding new/updated purchase and re-add it only if signature is valid
+        // the resulting list is then all existing purchases + new/updated
         val newPurchases = this.purchases
             .filter { it.orderId != purchase.orderId }
             .toMutableList()
             .also {
-                // only include it if signature is valid
                 if (isSignatureValid(purchase)) {
                     it.add(purchase)
                     
@@ -564,6 +565,15 @@ class BillingHelper(
         }
     }
 
+    // retrieve product names from the given product type
+    private fun getProductNamesForType(productType: String): List<String> {
+        return when(productType) {
+            BillingClient.ProductType.INAPP -> productInAppPurchases.orEmpty()
+            BillingClient.ProductType.SUBS -> productSubscriptions.orEmpty()
+            else -> emptyList()
+        }
+    }
+
     // verify purchase if key is present
     private fun isSignatureValid(purchase: Purchase): Boolean {
         val key = this.key ?: return true
@@ -572,11 +582,11 @@ class BillingHelper(
 
     // figure out what's wrong when trying to initialize purchase, because it fails due to
     // predictable reasons
-    private fun getPurchaseFlowErrorMessage(skuName: String): String {
+    private fun getPurchaseFlowErrorMessage(productName: String): String {
         return when {
             !billingClient.isReady -> "Billing not ready."
             !productDetailsQueried -> "SKU details have not been queried yet."
-            else -> "skuName $skuName not recognized among sku details."
+            else -> "productName $productName not recognized among product details."
         }
     }
     // endregion Private Methods
