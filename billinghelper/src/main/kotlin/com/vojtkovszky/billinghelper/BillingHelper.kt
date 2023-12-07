@@ -144,7 +144,8 @@ class BillingHelper(
                 }
                 // send callback complete
                 invokeListener(billingEvent, billingResult.debugMessage, billingResult.responseCode)
-            }.build()
+            }
+            .build()
 
         // immediately connect client, if allowed so, and pass our preferences for pending queries
         // once client connects
