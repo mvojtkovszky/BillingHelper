@@ -45,14 +45,20 @@ class BillingHelper(
         private const val TAG = "BillingHelper"
     }
 
-    // billing client
-    private var billingClient: BillingClient
     // represents list of all currently owned purchases
     private val purchases = mutableListOf<Purchase>()
     // represents details of all available sku details
     private val productDetailsList = mutableListOf<ProductDetails>()
     // callback listeners
     private val billingListeners = mutableListOf<BillingListener>()
+
+    /**
+     * Reference to the main [BillingClient].
+     * Note that most logic for the client is handled by the helper implicitly already, so ideally
+     * only use this to access additional functionalities like alternative billing or use choice billing.
+     */
+    var billingClient: BillingClient
+        private set
 
     // keep track if we've actually queried purchases and sku details
     /**

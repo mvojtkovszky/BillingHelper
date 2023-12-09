@@ -1,5 +1,5 @@
 # BillingHelper
-Wrapper around Google Play Billing Library (v6.0.1), simplifying its use. 
+Simplify the use of Google Play Billing Library (v6.1.0). 
 Handles client connection, querying product details, owned purchases, different purchase types, 
 acknowledging purchases, verify purchase signatures etc.
 
@@ -58,6 +58,8 @@ var queryOwnedPurchasesOnConnected: Boolean
 var autoAcknowledgePurchases: Boolean
 var enableLogging: Boolean
 
+var billingClient: BillingClient
+    private set
 val billingReady: Boolean
 val connectionState: Int
 var purchasesQueried: Boolean

@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.3.1 (TBD)
+* `BillingHelper.billingClient` is now public.
+* bump Gradle plugin to 8.2.0
+
 ## 2.3.0 (2023-12-07)
 * rename param from "skuNames" to "productNames" for `BillingHelper.isPurchasedAnyOf`
 * fix issue where purchase will still be present even if not included in the result from additional call to `BillingHelper.initQueryOwnedPurchases`
