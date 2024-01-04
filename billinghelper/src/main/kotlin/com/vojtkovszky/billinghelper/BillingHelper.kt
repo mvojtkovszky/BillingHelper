@@ -81,6 +81,13 @@ class BillingHelper(
         private set
 
     /**
+     * Determine if owned purchases have been successfully queried yet.
+     * That happens with successful completion of [initQueryOwnedPurchasesHistory].
+     */
+    var purchasesHistoryQueried: Boolean = false
+        private set
+
+    /**
      * Determine if sku details have been successfully queried yet.
      * That happens with successful completion of [initQueryProductDetails].
      *
@@ -353,6 +360,15 @@ class BillingHelper(
     }
 
     /**
+     * Initialize query for the most recent purchase made by the user for each SKU within your app.
+     * Will query for both in-app purchases and subscriptions.
+     * Result will be returned using [billingListeners] after [purchases] is updated.
+     */
+    fun initQueryOwnedPurchasesHistory() {
+        initQueryOwnedPurchasesHistoryForTypes(getAvailableTypes(), 0, mutableListOf())
+    }
+
+    /**
      * Initialize query for [ProductDetails] listed for this app.
      * Will query for both in-app purchases and subscriptions.
      * Result will be returned using [billingListeners]
@@ -447,6 +463,7 @@ class BillingHelper(
     private fun initQueryOwnedPurchasesForTypes(
         types: List<String>,
         currentTypeIndex: Int,
+
         resultingList: MutableList<Purchase>) {
 
         // handled all types
@@ -480,6 +497,44 @@ class BillingHelper(
                 } else {
                     invokeListener(
                         event = BillingEvent.QUERY_OWNED_PURCHASES_FAILED,
+                        message = queryResult.debugMessage,
+                        responseCode = queryResult.responseCode
+                    )
+                }
+            }
+        }
+    }
+
+    private fun initQueryOwnedPurchasesHistoryForTypes(
+        types: List<String>,
+        currentTypeIndex: Int,
+        resultingList: MutableList<PurchaseHistoryRecord>) {
+
+        // handled all types
+        if (currentTypeIndex == types.size) {
+            // Do not clear purchases, as history does not fetch ALL purchases, only the most recent
+            // for each SKU, which can include cancelled or expired purchases.
+            // mark as queried
+            this.purchasesHistoryQueried = true
+            // invoke callback
+            invokeListener(
+                event = BillingEvent.QUERY_OWNED_PURCHASES_HISTORY_COMPLETE,
+                message = resultingList.toString()
+            )
+        }
+        // query for type on current index
+        else {
+            val currentType = types[currentTypeIndex]
+            billingClient.queryPurchaseHistoryAsync(
+                QueryPurchaseHistoryParams.newBuilder().setProductType(currentType).build()
+            ) { queryResult, purchases ->
+                if (queryResult.isResponseOk()) {
+                    if (purchases != null)
+                        resultingList.addAll(purchases)
+                    initQueryOwnedPurchasesHistoryForTypes(types, currentTypeIndex+1, resultingList)
+                } else {
+                    invokeListener(
+                        event = BillingEvent.QUERY_OWNED_PURCHASES_HISTORY_FAILED,
                         message = queryResult.debugMessage,
                         responseCode = queryResult.responseCode
                     )

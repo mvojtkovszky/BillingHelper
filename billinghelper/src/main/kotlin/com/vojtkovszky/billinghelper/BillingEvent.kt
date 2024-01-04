@@ -46,6 +46,16 @@ enum class BillingEvent {
     QUERY_OWNED_PURCHASES_FAILED,
 
     /**
+     * Success from [BillingClient.queryPurchaseHistoryAsync]
+     */
+    QUERY_OWNED_PURCHASES_HISTORY_COMPLETE,
+
+    /**
+     * Failure from [BillingClient.queryPurchaseHistoryAsync]
+     */
+    QUERY_OWNED_PURCHASES_HISTORY_FAILED,
+
+    /**
      * Success from [BillingClient.launchBillingFlow]
      */
     PURCHASE_COMPLETE,
