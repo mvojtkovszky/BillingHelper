@@ -47,6 +47,8 @@ class BillingHelper(
 
     // represents list of all currently owned purchases
     private val purchases = mutableListOf<Purchase>()
+    // represents list of the most recent purchases
+    private val history = mutableListOf<PurchaseHistoryRecord>()
     // represents details of all available sku details
     private val productDetailsList = mutableListOf<ProductDetails>()
     // callback listeners
@@ -211,6 +213,20 @@ class BillingHelper(
     }
 
     /**
+     * Will return a single [PurchaseHistoryRecord] object that contains a given [productName] or null
+     * if no match found.
+     * Note that you need to query for owned purchases using [initQueryOwnedPurchasesHistory] or complete a
+     * purchase before, in order for this to be not null.
+     */
+    fun getPurchaseRecordWithProductName(productName: String): PurchaseHistoryRecord? {
+        return try {
+            history.find { it.products.contains(productName) }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
      * Will return a single [ProductDetails] object with a given [productName] or null if no match found.
      * Note that you need to query for sku details first using [initQueryProductDetails] in order
      * for this not to be null.
@@ -236,6 +252,23 @@ class BillingHelper(
     fun isPurchasedAnyOf(vararg productNames: String): Boolean {
         for (productName in productNames) {
             if (isPurchased(productName)) return true
+        }
+        return false
+    }
+
+    /**
+     * Determine whether product with given name has a purchase record
+     */
+    fun hasPurchaseRecord(productName: String): Boolean {
+        return getPurchaseWithProductName(productName)?.isPurchased() == true
+    }
+
+    /**
+     * Determine if at least one product among given names has a purchase record
+     */
+    fun hasPurchaseRecordAnyOf(vararg productNames: String): Boolean {
+        for (productName in productNames) {
+            if (hasPurchaseRecord(productName)) return true
         }
         return false
     }
@@ -512,8 +545,11 @@ class BillingHelper(
 
         // handled all types
         if (currentTypeIndex == types.size) {
-            // Do not clear purchases, as history does not fetch ALL purchases, only the most recent
-            // for each SKU, which can include cancelled or expired purchases.
+            // repopulate purchases, clear first
+            this.history.clear()
+            for (record in resultingList) {
+                addOrUpdateRecord(record)
+            }
             // mark as queried
             this.purchasesHistoryQueried = true
             // invoke callback
@@ -614,6 +650,28 @@ class BillingHelper(
         this.purchases.addAll(newPurchases)
     }
 
+    // purchases history list repopulate and handle logic of acknowledge check and init
+    @Synchronized
+    private fun addOrUpdateRecord(record: PurchaseHistoryRecord) {
+        // take existing purchases excluding new/updated purchase and re-add it only if signature is valid
+        // the resulting list is then all existing purchases + new/updated
+        val newRecords = this.history
+            .filter { it.purchaseToken != record.purchaseToken }
+            .toMutableList()
+            .also {
+                if (isSignatureValid(record)) {
+                    it.add(record)
+
+                    if (enableLogging) {
+                        Log.d(TAG, "History record added: ${record.products}")
+                    }
+                }
+            }
+
+        this.history.clear()
+        this.history.addAll(newRecords)
+    }
+
     // get available sku based on SkuTypes based on skuInAppPurchases and skuSubscriptions availability
     private fun getAvailableTypes(): List<String> {
         return mutableListOf<String>().apply {
@@ -639,6 +697,12 @@ class BillingHelper(
     private fun isSignatureValid(purchase: Purchase): Boolean {
         val key = this.key ?: return true
         return Security.verifyPurchase(key, purchase.originalJson, purchase.signature)
+    }
+
+    // verify purchase if key is present
+    private fun isSignatureValid(record: PurchaseHistoryRecord): Boolean {
+        val key = this.key ?: return true
+        return Security.verifyPurchase(key, record.originalJson, record.signature)
     }
 
     // figure out what's wrong when trying to initialize purchase, because it fails due to
