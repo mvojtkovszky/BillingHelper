@@ -199,7 +199,7 @@ class BillingHelper(
     /**
      * Will return a single [Purchase] object that contains a given [productName] or null
      * if no match found.
-     * Note that you need to query for owned purchases using [initQueryProductDetails] or complete a
+     * Note that you need to query for owned purchases using [initQueryOwnedPurchases] or complete a
      * purchase before, in order for this to be not null.
      */
     fun getPurchaseWithProductName(productName: String): Purchase? {
@@ -212,7 +212,7 @@ class BillingHelper(
 
     /**
      * Will return a single [ProductDetails] object with a given [productName] or null if no match found.
-     * Note that you need to query for sku details first using [initQueryOwnedPurchases] in order
+     * Note that you need to query for sku details first using [initQueryProductDetails] in order
      * for this not to be null.
      */
     fun getProductDetails(productName: String): ProductDetails? {
