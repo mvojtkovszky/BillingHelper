@@ -260,7 +260,7 @@ class BillingHelper(
      * Determine whether product with given name has a purchase record
      */
     fun hasPurchaseRecord(productName: String): Boolean {
-        return getPurchaseWithProductName(productName)?.isPurchased() == true
+        return getPurchaseRecordWithProductName(productName) != null
     }
 
     /**
