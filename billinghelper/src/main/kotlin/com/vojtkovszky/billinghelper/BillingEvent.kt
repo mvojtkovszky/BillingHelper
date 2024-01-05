@@ -164,6 +164,14 @@ enum class BillingEvent {
         ).contains(this)
 
     /**
+     * Determine if event belongs to query owned purchases history flow.
+     */
+    val isQueryOwnedPurchasesHistoryFlow: Boolean
+        get() = listOf(
+            QUERY_OWNED_PURCHASES_HISTORY_COMPLETE, QUERY_OWNED_PURCHASES_HISTORY_FAILED
+        ).contains(this)
+
+    /**
      * Determine if event belongs to consume purchase flow.
      */
     val isConsumePurchaseFlow: Boolean
