@@ -1,8 +1,10 @@
 # CHANGELOG
 
-## 2.3.1 (TBD)
+## 2.4.0 (TBD)
 * `BillingHelper.billingClient` is now public.
-* bump Gradle plugin to 8.2.0
+* Add `enableAlternativeBillingOnly` and `enableExternalOffer` properties to constructor.
+* bump Google Billing to 6.2.0
+* bump Gradle plugin to 8.3.1, Kotlin to 1.9.23
 
 ## 2.3.0 (2023-12-07)
 * rename param from "skuNames" to "productNames" for `BillingHelper.isPurchasedAnyOf`
