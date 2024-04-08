@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## 2.4.0 (TBD)
+## 2.4.0 (2024-04-08)
 * `BillingHelper.billingClient` is now public.
 * Add `enableAlternativeBillingOnly` and `enableExternalOffer` properties to constructor.
 * bump Google Billing to 6.2.0
