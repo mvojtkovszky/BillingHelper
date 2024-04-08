@@ -3,7 +3,7 @@ apply plugin: 'maven-publish'
 tasks.register('javadocJar', Jar) {
     dependsOn dokkaJavadoc
     archiveClassifier.set('javadoc')
-    from "$buildDir/dokka/javadoc"
+    from "${rootProject.layout.buildDirectory}/dokka/javadoc"
 }
 
 afterEvaluate {

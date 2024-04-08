@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 2.4.0 (2024-04-08)
+* `BillingHelper.billingClient` is now public.
+* Add `enableAlternativeBillingOnly` and `enableExternalOffer` properties to constructor.
+* bump Google Billing to 6.2.0
+* bump Gradle plugin to 8.3.1, Kotlin to 1.9.23
+
 ## 2.3.0 (2023-12-07)
 * rename param from "skuNames" to "productNames" for `BillingHelper.isPurchasedAnyOf`
 * fix issue where purchase will still be present even if not included in the result from additional call to `BillingHelper.initQueryOwnedPurchases`

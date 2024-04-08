@@ -15,16 +15,17 @@ import com.android.billingclient.api.*
  * @param context required to build [BillingClient].
  * @param productInAppPurchases list of product names of in app purchases supported by the app.
  * @param productSubscriptions list of product names of subscriptions supported by the app.
- * @param startConnectionImmediately set whether [initClientConnection] should be called automatically
- * when [BillingHelper] is initialized.
+ * @param startConnectionImmediately set whether [initClientConnection] should be called automatically when [BillingHelper] is initialized.
  * @param key app's license key. If provided, it will be used to verify purchase signatures.
- * @param querySkuDetailsOnConnected set whether [initQueryProductDetails] should be called automatically
- * right after client connects (when [initClientConnection] succeeds).
- * @param queryOwnedPurchasesOnConnected set whether [initQueryOwnedPurchases] should be called automatically
- * right after client connects (when [initClientConnection] succeeds).
+ * @param querySkuDetailsOnConnected set whether [initQueryProductDetails] should be called automatically right after client connects (when [initClientConnection] succeeds).
+ * @param queryOwnedPurchasesOnConnected set whether [initQueryOwnedPurchases] should be called automatically right after client connects (when [initClientConnection] succeeds).
  * @param autoAcknowledgePurchases All purchases require acknowledgement.
  * By default, this is handled automatically every time state of purchases changes.
  * If set to [Boolean.false], make sure [acknowledgePurchases] is used manually.
+ * @param enableAlternativeBillingOnly build client with [BillingClient.Builder.enableAlternativeBillingOnly]
+ * For more details see [https://developer.android.com/reference/com/android/billingclient/api/BillingClient.Builder#enableAlternativeBillingOnly()]
+ * @param enableExternalOffer build client with [BillingClient.Builder.enableExternalOffer]
+ * For more details see [https://developer.android.com/reference/com/android/billingclient/api/BillingClient.Builder#enableExternalOffer()]
  * @param enableLogging toggle output of status logs
  * @param billingListener default listener that'll be added as [addBillingListener].
  */
@@ -38,6 +39,8 @@ class BillingHelper(
     var querySkuDetailsOnConnected: Boolean = true,
     var queryOwnedPurchasesOnConnected: Boolean = true,
     var autoAcknowledgePurchases: Boolean = true,
+    enableAlternativeBillingOnly: Boolean = false,
+    enableExternalOffer: Boolean = false,
     var enableLogging: Boolean = false,
     billingListener: BillingListener? = null
 ) {
@@ -45,14 +48,20 @@ class BillingHelper(
         private const val TAG = "BillingHelper"
     }
 
-    // billing client
-    private var billingClient: BillingClient
     // represents list of all currently owned purchases
     private val purchases = mutableListOf<Purchase>()
     // represents details of all available sku details
     private val productDetailsList = mutableListOf<ProductDetails>()
     // callback listeners
     private val billingListeners = mutableListOf<BillingListener>()
+
+    /**
+     * Reference to the main [BillingClient]. Initialized in [BillingHelper] init.
+     * Note that most logic for the client is handled by the helper implicitly already, so ideally
+     * only use this to access additional functionalities like alternative billing or use choice billing.
+     */
+    var billingClient: BillingClient
+        private set
 
     // keep track if we've actually queried purchases and sku details
     /**
@@ -124,6 +133,14 @@ class BillingHelper(
 
         // build client
         billingClient = BillingClient.newBuilder(context)
+            .apply {
+                if (enableAlternativeBillingOnly) {
+                    enableAlternativeBillingOnly()
+                }
+                if (enableExternalOffer) {
+                    enableExternalOffer()
+                }
+            }
             .enablePendingPurchases()
             .setListener { billingResult, purchases -> // PurchasesUpdatedListener
                 val billingEvent = when {
