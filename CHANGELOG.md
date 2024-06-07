@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## 3.0.1 (TBD)
+*
+
 ## 3.0.0 (2024-06-07)
 * add `´billingBuilderConfig` to `BillingHelper` constructor holding all parameters related to alternative billing and pending purchases support
 * move `enableAlternativeBillingOnly` and `enableExternalOffer` to `BillingBuilderConfig`
