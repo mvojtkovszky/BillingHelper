@@ -1,7 +1,10 @@
 # CHANGELOG
 
-## 2.4.1 (TBD)
-*
+## 3.0.0 (TBD)
+* add `´billingBuilderConfig` to `BillingHelper` constructor holding all parameters related to alternative billing and pending purchases support
+* move `enableAlternativeBillingOnly` and `enableExternalOffer` to `BillingBuilderConfig`
+* bump Google Billing to 7.0.0
+* bump Gradle plugin to 8.3.2
 
 ## 2.4.0 (2024-04-08)
 * `BillingHelper.billingClient` is now public.
