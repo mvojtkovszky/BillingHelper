@@ -17,15 +17,12 @@ import com.android.billingclient.api.*
  * @param productSubscriptions list of product names of subscriptions supported by the app.
  * @param startConnectionImmediately set whether [initClientConnection] should be called automatically when [BillingHelper] is initialized.
  * @param key app's license key. If provided, it will be used to verify purchase signatures.
+ * @param billingBuilderConfig additional configuration used when building [BillingClient]. Default covers most common use cases.
  * @param querySkuDetailsOnConnected set whether [initQueryProductDetails] should be called automatically right after client connects (when [initClientConnection] succeeds).
  * @param queryOwnedPurchasesOnConnected set whether [initQueryOwnedPurchases] should be called automatically right after client connects (when [initClientConnection] succeeds).
  * @param autoAcknowledgePurchases All purchases require acknowledgement.
  * By default, this is handled automatically every time state of purchases changes.
  * If set to [Boolean.false], make sure [acknowledgePurchases] is used manually.
- * @param enableAlternativeBillingOnly build client with [BillingClient.Builder.enableAlternativeBillingOnly]
- * For more details see [https://developer.android.com/reference/com/android/billingclient/api/BillingClient.Builder#enableAlternativeBillingOnly()]
- * @param enableExternalOffer build client with [BillingClient.Builder.enableExternalOffer]
- * For more details see [https://developer.android.com/reference/com/android/billingclient/api/BillingClient.Builder#enableExternalOffer()]
  * @param enableLogging toggle output of status logs
  * @param billingListener default listener that'll be added as [addBillingListener].
  */
@@ -36,13 +33,12 @@ class BillingHelper(
     private val productSubscriptions: List<String>?,
     private val startConnectionImmediately: Boolean = true,
     private var key: String? = null,
+    private var billingBuilderConfig: BillingBuilderConfig = BillingBuilderConfig(),
     var querySkuDetailsOnConnected: Boolean = true,
     var queryOwnedPurchasesOnConnected: Boolean = true,
     var autoAcknowledgePurchases: Boolean = true,
-    enableAlternativeBillingOnly: Boolean = false,
-    enableExternalOffer: Boolean = false,
     var enableLogging: Boolean = false,
-    billingListener: BillingListener? = null
+    billingListener: BillingListener? = null,
 ) {
     companion object {
         private const val TAG = "BillingHelper"
@@ -134,14 +130,27 @@ class BillingHelper(
         // build client
         billingClient = BillingClient.newBuilder(context)
             .apply {
-                if (enableAlternativeBillingOnly) {
+                if (billingBuilderConfig.enableAlternativeBillingOnly) {
                     enableAlternativeBillingOnly()
                 }
-                if (enableExternalOffer) {
+                if (billingBuilderConfig.enableExternalOffer) {
                     enableExternalOffer()
                 }
+                if (billingBuilderConfig.enablePendingPurchasesPrepaidPlans ||
+                    billingBuilderConfig.enablePendingPurchasesOneTimeProducts) {
+                    val pendingPurchasesParams = PendingPurchasesParams.newBuilder()
+                    if (billingBuilderConfig.enablePendingPurchasesPrepaidPlans) {
+                        pendingPurchasesParams.enablePrepaidPlans()
+                    }
+                    if (billingBuilderConfig.enablePendingPurchasesOneTimeProducts) {
+                        pendingPurchasesParams.enableOneTimeProducts()
+                    }
+                    enablePendingPurchases(pendingPurchasesParams.build())
+                }
+                billingBuilderConfig.userChoiceBillingListener?.let {
+                    enableUserChoiceBilling(it)
+                }
             }
-            .enablePendingPurchases()
             .setListener { billingResult, purchases -> // PurchasesUpdatedListener
                 val billingEvent = when {
                     billingResult.isResponseOk() && purchases != null -> {

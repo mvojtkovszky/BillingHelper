@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 3.0.0 (2024-06-07)
+* add `´billingBuilderConfig` to `BillingHelper` constructor holding all parameters related to alternative billing and pending purchases support
+* move `enableAlternativeBillingOnly` and `enableExternalOffer` to `BillingBuilderConfig`
+* bump Google Billing to 7.0.0
+* bump Gradle plugin to 8.3.2, core-ktx to 1.13.1
+* `minSdkVersion` has been raised from 19 to 21
+
 ## 2.4.0 (2024-04-08)
 * `BillingHelper.billingClient` is now public.
 * Add `enableAlternativeBillingOnly` and `enableExternalOffer` properties to constructor.
