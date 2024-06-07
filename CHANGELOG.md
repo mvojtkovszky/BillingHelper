@@ -5,6 +5,7 @@
 * move `enableAlternativeBillingOnly` and `enableExternalOffer` to `BillingBuilderConfig`
 * bump Google Billing to 7.0.0
 * bump Gradle plugin to 8.3.2
+* `minSdkVersion` has been raised from 19 to 21
 
 ## 2.4.0 (2024-04-08)
 * `BillingHelper.billingClient` is now public.
