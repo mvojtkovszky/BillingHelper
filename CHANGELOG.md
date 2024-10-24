@@ -1,7 +1,8 @@
 # CHANGELOG
 
-## 3.1.1 (TBD)
-* 
+## 3.2.0 (TBD)
+* Support subscription updates or replacements: Added optional parameters `subscriptionUpdateOldName`, 
+  `subscriptionUpdateReplacementMode` and `subscriptionUpdateExternalTransactionId` to `launchPurchaseFlow()` 
 
 ## 3.1.0 (2024-10-18)
 * bump Google Billing to 7.1.1
