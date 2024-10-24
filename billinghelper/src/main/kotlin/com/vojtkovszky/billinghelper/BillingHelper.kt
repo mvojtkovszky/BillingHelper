@@ -254,18 +254,36 @@ class BillingHelper(
     }
 
     /**
-     * Will start a purchase flow for given product name.
-     * Result will get back to [PurchasesUpdatedListener]
+     * Will start a purchase flow for the given product name.
+     * The result will be sent back to [PurchasesUpdatedListener].
      *
      * @param activity An activity reference from which the billing flow will be launched.
-     * @param productName name for the IAP or Subscription we intent to purchase.
-     * @param obfuscatedAccountId see [setObfuscatedAccountId](https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.Builder#setObfuscatedAccountId(java.lang.String))
-     * @param obfuscatedProfileId see [setObfuscatedProfileId](https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.Builder#setObfuscatedProfileId(java.lang.String))
-     * @param isOfferPersonalized see [setIsOfferPersonalized](https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.Builder#setIsOfferPersonalized(boolean))
-     * @param selectedOfferIndex see [ProductDetails.SubscriptionOfferDetails]
+     * @param productName Name of the IAP or Subscription we intend to purchase.
+     * @param subscriptionUpdateOldName Name of the Subscription that will be upgraded or downgraded from.
+     *        See [https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.SubscriptionUpdateParams].
+     *        Note that [productName] must also be a subscription for this to take effect.
+     * @param subscriptionUpdateReplacementMode Supported replacement modes to replace an
+     *        existing subscription with a new one.
+     *        See [https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.SubscriptionUpdateParams.ReplacementMode].
+     *        Note that [subscriptionUpdateOldName] must be defined or this parameter will be ignored.
+     * @param subscriptionUpdateExternalTransactionId If the originating transaction for the subscription
+     *        that the user is upgrading or downgrading from was processed via
+     *        alternative billing.
+     *        See [https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.SubscriptionUpdateParams.Builder#setOriginalExternalTransactionId(java.lang.String)].
+     *        Note that [subscriptionUpdateOldName] must be defined or this parameter will be ignored.
+     * @param obfuscatedAccountId See
+     *        [setObfuscatedAccountId](https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.Builder#setObfuscatedAccountId(java.lang.String)).
+     * @param obfuscatedProfileId See
+     *        [setObfuscatedProfileId](https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.Builder#setObfuscatedProfileId(java.lang.String)).
+     * @param isOfferPersonalized See
+     *        [setIsOfferPersonalized](https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.Builder#setIsOfferPersonalized(boolean)).
+     * @param selectedOfferIndex See [ProductDetails.SubscriptionOfferDetails].
      */
     fun launchPurchaseFlow(activity: Activity,
                            productName: String,
+                           subscriptionUpdateOldName: String? = null,
+                           subscriptionUpdateReplacementMode: Int? = null,
+                           subscriptionUpdateExternalTransactionId: String? = null,
                            obfuscatedAccountId: String? = null,
                            obfuscatedProfileId: String? = null,
                            isOfferPersonalized: Boolean? = null,
@@ -291,7 +309,24 @@ class BillingHelper(
                 obfuscatedAccountId?.let { setObfuscatedAccountId(it) }
                 obfuscatedProfileId?.let { setObfuscatedProfileId(it) }
                 isOfferPersonalized?.let { setIsOfferPersonalized(it) }
-            } .build()
+                // subscription update
+                subscriptionUpdateOldName?.let { oldName ->
+                    setSubscriptionUpdateParams(
+                        BillingFlowParams.SubscriptionUpdateParams
+                            .newBuilder()
+                            .setOldPurchaseToken(oldName)
+                            .apply {
+                                subscriptionUpdateReplacementMode?.let { mode ->
+                                    setSubscriptionReplacementMode(mode)
+                                }
+                                subscriptionUpdateExternalTransactionId?.let { externalTransactionId ->
+                                    setOriginalExternalTransactionId(externalTransactionId)
+                                }
+                            }
+                            .build()
+                    )
+                }
+            }.build()
 
             // Launch the billing flow
             val result = billingClient.launchBillingFlow(activity, billingFlowParams)
