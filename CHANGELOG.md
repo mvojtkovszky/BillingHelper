@@ -1,7 +1,9 @@
 # CHANGELOG
 
-## 3.1.1 (TBD)
-* 
+## 3.2.0 (2024-11-05)
+* Support subscription updates or replacements: Added optional parameters `subscriptionUpdateOldToken`, 
+  `subscriptionUpdateExternalTransactionId` and `subscriptionUpdateReplacementMode` to `launchPurchaseFlow()` 
+* bump Gradle plugin to 8.7.2, core-ktx to 1.15.0
 
 ## 3.1.0 (2024-10-18)
 * bump Google Billing to 7.1.1

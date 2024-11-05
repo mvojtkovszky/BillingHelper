@@ -259,18 +259,14 @@ class BillingHelper(
      *
      * @param activity An activity reference from which the billing flow will be launched.
      * @param productName Name of the IAP or Subscription we intend to purchase.
-     * @param subscriptionUpdateOldName Name of the Subscription that will be upgraded or downgraded from.
+     * @param subscriptionUpdateOldToken Google Play Billing purchase token that the user is upgrading or downgrading from.
      *        See [https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.SubscriptionUpdateParams].
      *        Note that [productName] must also be a subscription for this to take effect.
-     * @param subscriptionUpdateReplacementMode Supported replacement modes to replace an
-     *        existing subscription with a new one.
-     *        See [https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.SubscriptionUpdateParams.ReplacementMode].
-     *        Note that [subscriptionUpdateOldName] must be defined or this parameter will be ignored.
      * @param subscriptionUpdateExternalTransactionId If the originating transaction for the subscription
-     *        that the user is upgrading or downgrading from was processed via
-     *        alternative billing.
+     *        that the user is upgrading or downgrading from was processed via alternative billing.
      *        See [https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.SubscriptionUpdateParams.Builder#setOriginalExternalTransactionId(java.lang.String)].
-     *        Note that [subscriptionUpdateOldName] must be defined or this parameter will be ignored.
+     * @param subscriptionUpdateReplacementMode Supported replacement modes to replace an existing subscription with a new one.
+     *        See [https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.SubscriptionUpdateParams.ReplacementMode].
      * @param obfuscatedAccountId See
      *        [setObfuscatedAccountId](https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.Builder#setObfuscatedAccountId(java.lang.String)).
      * @param obfuscatedProfileId See
@@ -281,9 +277,9 @@ class BillingHelper(
      */
     fun launchPurchaseFlow(activity: Activity,
                            productName: String,
-                           subscriptionUpdateOldName: String? = null,
-                           subscriptionUpdateReplacementMode: Int? = null,
+                           subscriptionUpdateOldToken: String? = null,
                            subscriptionUpdateExternalTransactionId: String? = null,
+                           subscriptionUpdateReplacementMode: Int? = null,
                            obfuscatedAccountId: String? = null,
                            obfuscatedProfileId: String? = null,
                            isOfferPersonalized: Boolean? = null,
@@ -310,17 +306,19 @@ class BillingHelper(
                 obfuscatedProfileId?.let { setObfuscatedProfileId(it) }
                 isOfferPersonalized?.let { setIsOfferPersonalized(it) }
                 // subscription update
-                subscriptionUpdateOldName?.let { oldName ->
+                if (subscriptionUpdateOldToken != null || subscriptionUpdateExternalTransactionId != null) {
                     setSubscriptionUpdateParams(
                         BillingFlowParams.SubscriptionUpdateParams
                             .newBuilder()
-                            .setOldPurchaseToken(oldName)
                             .apply {
-                                subscriptionUpdateReplacementMode?.let { mode ->
-                                    setSubscriptionReplacementMode(mode)
+                                subscriptionUpdateOldToken?.let { token ->
+                                    setOldPurchaseToken(token)
                                 }
                                 subscriptionUpdateExternalTransactionId?.let { externalTransactionId ->
                                     setOriginalExternalTransactionId(externalTransactionId)
+                                }
+                                subscriptionUpdateReplacementMode?.let { mode ->
+                                    setSubscriptionReplacementMode(mode)
                                 }
                             }
                             .build()
