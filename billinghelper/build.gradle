@@ -38,7 +38,7 @@ android {
 
 dependencies {
     /* https://developer.android.com/jetpack/androidx/releases/core */
-    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.core:core-ktx:1.15.0'
     /*
     https://developer.android.com/google/play/billing/billing_library_overview
     https://developer.android.com/google/play/billing/release-notes
