@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## 3.2.1 (TBD)
+* 
+
 ## 3.2.0 (2024-11-05)
 * Support subscription updates or replacements: Added optional parameters `subscriptionUpdateOldToken`, 
   `subscriptionUpdateExternalTransactionId` and `subscriptionUpdateReplacementMode` to `launchPurchaseFlow()` 
