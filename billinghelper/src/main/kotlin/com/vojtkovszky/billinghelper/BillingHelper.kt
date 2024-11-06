@@ -273,7 +273,8 @@ class BillingHelper(
      *        [setObfuscatedProfileId](https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.Builder#setObfuscatedProfileId(java.lang.String)).
      * @param isOfferPersonalized See
      *        [setIsOfferPersonalized](https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.Builder#setIsOfferPersonalized(boolean)).
-     * @param selectedOfferIndex See [ProductDetails.SubscriptionOfferDetails].
+     * @param selectedBasePlanId applies to a subscription, define base plan id to initiate a purchase with. If no value is provided, first offer will be used. Can be combined with [selectedOfferId]
+     * @param selectedOfferId applies to a subscription, define offer id to initiate a purchase with. If no value is provided, first offer will be used. Can be combined with [selectedBasePlanId]
      */
     fun launchPurchaseFlow(activity: Activity,
                            productName: String,
@@ -283,20 +284,23 @@ class BillingHelper(
                            obfuscatedAccountId: String? = null,
                            obfuscatedProfileId: String? = null,
                            isOfferPersonalized: Boolean? = null,
-                           selectedOfferIndex: Int = 0
+                           selectedBasePlanId: String? = null,
+                           selectedOfferId: String? = null
     ) {
         val productDetailsForPurchase = getProductDetails(productName)
 
         if (billingClient.isReady && productDetailsForPurchase != null) {
-            val offerToken = selectedOfferIndex.let {
-                productDetailsForPurchase.subscriptionOfferDetails?.get(it)?.offerToken
-            }
-
             val productDetailsParams = BillingFlowParams.ProductDetailsParams.newBuilder().apply {
                 setProductDetails(productDetailsForPurchase)
-                // offer token required for subscriptions
+                // offer token required for subscription
                 if (productDetailsForPurchase.isSubscription()) {
-                    offerToken?.let { setOfferToken(offerToken) }
+                    // set if found, or apply first found by default.
+                    productDetailsForPurchase.subscriptionOfferDetails?.firstOrNull { offer ->
+                            (selectedBasePlanId == null || offer.basePlanId == selectedBasePlanId) &&
+                                    (selectedOfferId == null || offer.offerId == selectedOfferId)
+                        }?.offerToken?.let { token ->
+                            setOfferToken(token)
+                        }
                 }
             }.build()
 
