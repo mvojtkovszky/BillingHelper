@@ -282,11 +282,8 @@ class BillingHelper(
                 setProductDetails(productDetailsForPurchase)
                 // offer token required for subscription
                 if (productDetailsForPurchase.isSubscription()) {
-                    // set if found, or apply first found by default.
-                    productDetailsForPurchase.subscriptionOfferDetails?.firstOrNull { offer ->
-                            (subscriptionParams?.basePlanId == null || offer.basePlanId == subscriptionParams.basePlanId) &&
-                                    (subscriptionParams?.offerId == null || offer.offerId == subscriptionParams.offerId)
-                        }?.offerToken?.let { token ->
+                    (subscriptionParams ?: SubscriptionPurchaseParams())
+                        .getOfferToken(productDetailsForPurchase)?.let { token ->
                             setOfferToken(token)
                         }
                 }
@@ -297,24 +294,9 @@ class BillingHelper(
                 obfuscatedAccountId?.let { setObfuscatedAccountId(it) }
                 obfuscatedProfileId?.let { setObfuscatedProfileId(it) }
                 isOfferPersonalized?.let { setIsOfferPersonalized(it) }
-                // subscription update
-                if (subscriptionParams?.updateOldToken != null || subscriptionParams?.updateExternalTransactionId != null) {
-                    setSubscriptionUpdateParams(
-                        BillingFlowParams.SubscriptionUpdateParams
-                            .newBuilder()
-                            .apply {
-                                subscriptionParams.updateOldToken?.let { token ->
-                                    setOldPurchaseToken(token)
-                                }
-                                subscriptionParams.updateExternalTransactionId?.let { id ->
-                                    setOriginalExternalTransactionId(id)
-                                }
-                                subscriptionParams.updateReplacementMode?.let { mode ->
-                                    setSubscriptionReplacementMode(mode)
-                                }
-                            }
-                            .build()
-                    )
+                // subscription update params
+                (subscriptionParams ?: SubscriptionPurchaseParams()).getSubscriptionUpdateParams()?.let {
+                    setSubscriptionUpdateParams(it)
                 }
             }.build()
 
