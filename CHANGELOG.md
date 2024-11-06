@@ -1,8 +1,9 @@
 # CHANGELOG
 
 ## 3.3.0 (TBD)
-* When calling `launchPurchaseFlow` with a subscription, added optional parameters `selectedBasePlanId: String?` and `selectedOfferId: String?`,
-  which replaced old index parameters. Similarly with `ProductDetails.getFormattedPrice` which now take optional `subscriptionBasePlanId` and `subscriptionOfferId`.
+* Added optional `subscriptionPurchaseParams` to `launchPurchaseFlow` method to unify subscription purchase definitions. 
+  Added optional parameters `basePlanId: String?` and `offerId: String?`, which replaced old index parameters. 
+  Similarly with `ProductDetails.getFormattedPrice`, which now take optional `subscriptionBasePlanId` and `subscriptionOfferId`.
 
 ## 3.2.0 (2024-11-05)
 * Support subscription updates or replacements: Added optional parameters `subscriptionUpdateOldToken`, 

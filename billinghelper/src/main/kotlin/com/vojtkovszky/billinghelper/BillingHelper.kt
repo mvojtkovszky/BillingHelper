@@ -259,33 +259,21 @@ class BillingHelper(
      *
      * @param activity An activity reference from which the billing flow will be launched.
      * @param productName Name of the IAP or Subscription we intend to purchase.
-     * @param subscriptionUpdateOldToken Google Play Billing purchase token that the user is upgrading or downgrading from.
-     *        See [https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.SubscriptionUpdateParams].
-     *        Note that [productName] must also be a subscription for this to take effect.
-     * @param subscriptionUpdateExternalTransactionId If the originating transaction for the subscription
-     *        that the user is upgrading or downgrading from was processed via alternative billing.
-     *        See [https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.SubscriptionUpdateParams.Builder#setOriginalExternalTransactionId(java.lang.String)].
-     * @param subscriptionUpdateReplacementMode Supported replacement modes to replace an existing subscription with a new one.
-     *        See [https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.SubscriptionUpdateParams.ReplacementMode].
+     * @param subscriptionParams Additional parameters often required for subscription purchases.
      * @param obfuscatedAccountId See
      *        [setObfuscatedAccountId](https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.Builder#setObfuscatedAccountId(java.lang.String)).
      * @param obfuscatedProfileId See
      *        [setObfuscatedProfileId](https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.Builder#setObfuscatedProfileId(java.lang.String)).
      * @param isOfferPersonalized See
      *        [setIsOfferPersonalized](https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.Builder#setIsOfferPersonalized(boolean)).
-     * @param selectedBasePlanId applies to a subscription, define base plan id to initiate a purchase with. If no value is provided, first offer will be used. Can be combined with [selectedOfferId]
-     * @param selectedOfferId applies to a subscription, define offer id to initiate a purchase with. If no value is provided, first offer will be used. Can be combined with [selectedBasePlanId]
      */
-    fun launchPurchaseFlow(activity: Activity,
-                           productName: String,
-                           subscriptionUpdateOldToken: String? = null,
-                           subscriptionUpdateExternalTransactionId: String? = null,
-                           subscriptionUpdateReplacementMode: Int? = null,
-                           obfuscatedAccountId: String? = null,
-                           obfuscatedProfileId: String? = null,
-                           isOfferPersonalized: Boolean? = null,
-                           selectedBasePlanId: String? = null,
-                           selectedOfferId: String? = null
+    fun launchPurchaseFlow(
+        activity: Activity,
+        productName: String,
+        subscriptionParams: SubscriptionPurchaseParams? = null,
+        obfuscatedAccountId: String? = null,
+        obfuscatedProfileId: String? = null,
+        isOfferPersonalized: Boolean? = null
     ) {
         val productDetailsForPurchase = getProductDetails(productName)
 
@@ -296,8 +284,8 @@ class BillingHelper(
                 if (productDetailsForPurchase.isSubscription()) {
                     // set if found, or apply first found by default.
                     productDetailsForPurchase.subscriptionOfferDetails?.firstOrNull { offer ->
-                            (selectedBasePlanId == null || offer.basePlanId == selectedBasePlanId) &&
-                                    (selectedOfferId == null || offer.offerId == selectedOfferId)
+                            (subscriptionParams?.basePlanId == null || offer.basePlanId == subscriptionParams.basePlanId) &&
+                                    (subscriptionParams?.offerId == null || offer.offerId == subscriptionParams.offerId)
                         }?.offerToken?.let { token ->
                             setOfferToken(token)
                         }
@@ -310,18 +298,18 @@ class BillingHelper(
                 obfuscatedProfileId?.let { setObfuscatedProfileId(it) }
                 isOfferPersonalized?.let { setIsOfferPersonalized(it) }
                 // subscription update
-                if (subscriptionUpdateOldToken != null || subscriptionUpdateExternalTransactionId != null) {
+                if (subscriptionParams?.updateOldToken != null || subscriptionParams?.updateExternalTransactionId != null) {
                     setSubscriptionUpdateParams(
                         BillingFlowParams.SubscriptionUpdateParams
                             .newBuilder()
                             .apply {
-                                subscriptionUpdateOldToken?.let { token ->
+                                subscriptionParams.updateOldToken?.let { token ->
                                     setOldPurchaseToken(token)
                                 }
-                                subscriptionUpdateExternalTransactionId?.let { externalTransactionId ->
-                                    setOriginalExternalTransactionId(externalTransactionId)
+                                subscriptionParams.updateExternalTransactionId?.let { id ->
+                                    setOriginalExternalTransactionId(id)
                                 }
-                                subscriptionUpdateReplacementMode?.let { mode ->
+                                subscriptionParams.updateReplacementMode?.let { mode ->
                                     setSubscriptionReplacementMode(mode)
                                 }
                             }
