@@ -6,49 +6,10 @@ import android.annotation.SuppressLint
 import android.util.Log
 import com.android.billingclient.api.ProductDetails
 
-object PriceUtil {
-    internal const val TAG = "BillingHelper/PriceUtil"
-
+internal object PriceUtil {
     var enableLogging: Boolean = false
-
-    /**
-     * Convert a formatted price to a formatted price with a given divider.
-     * For example: "16.80 EUR" with a divider of 4 will return "4.20 EUR"
-     *
-     * @param price formatted price input
-     * @param divider divide the extracted price
-     * @return formatted divided price or null on error
-     */
-    @SuppressLint("DefaultLocale")
-    fun convertFullPriceToDivided(
-        price: String,
-        divider: Int
-    ): String? {
-        // Regex to match currency before or after the numeric part, with comma or dot as decimal separator
-        val regex = """(\D*)\s*([\d,.]+)\s*(\D*)""".toRegex()
-        val matchResult = regex.matchEntire(price)
-
-        return if (matchResult != null) {
-            val (currencyPrefix, numericPart, currencySuffix) = matchResult.destructured
-
-            // Clean numeric part by replacing comma with dot if needed and converting to Double
-            val normalizedNumber = numericPart.replace(",", ".").toDoubleOrNull()
-            if (normalizedNumber != null) {
-                // Divide and format the result with two decimal places
-                val dividedPrice = normalizedNumber / divider
-                val formattedPrice = String.format("%.2f", dividedPrice)
-
-                // Construct the new price string with currency in the original position
-                "${currencyPrefix.trim()}$formattedPrice${currencySuffix.trim()}"
-            } else {
-                null // Return null if numeric conversion fails
-            }
-        } else {
-            null // Return null if the price format is not as expected
-        }
-    }
+    const val TAG = "BillingHelper/PriceUtil"
 }
-
 
 /**
  * A helper method making it easier to retrieve a formatted price from product details.
@@ -80,5 +41,55 @@ fun ProductDetails.getFormattedPrice(
     } catch (e: Exception) {
         if (PriceUtil.enableLogging) Log.e(PriceUtil.TAG, e.message ?: "")
         null
+    }
+}
+
+/**
+ * Same as [getFormattedPrice], but apply divider to the actual price.
+ * For example: "16.80 EUR" with a divider of 4 will return "4.20 EUR".
+ * Formatted price will be rounded to two decimal places.
+ *
+ * @param subscriptionBasePlanId see [getFormattedPrice]
+ * @param subscriptionOfferId see [getFormattedPrice]
+ * @param subscriptionPricingPhaseIndex see [getFormattedPrice]
+ * @param divider price divider
+ * @param dividerFormat divider format used for divided price when represented as String.
+ *                      Defaults to two decimal places (as "%.2f") but use other format if needed.
+ */
+@SuppressLint("DefaultLocale")
+fun ProductDetails.getFormattedPriceDivided(
+    subscriptionBasePlanId: String? = null,
+    subscriptionOfferId: String? = null,
+    subscriptionPricingPhaseIndex: Int = 0,
+    divider: Int,
+    dividerFormat: String = "%.2f"
+): String? {
+    return getFormattedPrice(
+        subscriptionBasePlanId,
+        subscriptionOfferId,
+        subscriptionPricingPhaseIndex
+    )?.let { price ->
+        // Regex to match currency before or after the numeric part, with comma or dot as decimal separator
+        val regex = """(\D*)\s*([\d,.]+)\s*(\D*)""".toRegex()
+        val matchResult = regex.matchEntire(price)
+
+        return if (matchResult != null) {
+            val (currencyPrefix, numericPart, currencySuffix) = matchResult.destructured
+
+            // Clean numeric part by replacing comma with dot if needed and converting to Double
+            val normalizedNumber = numericPart.replace(",", ".").toDoubleOrNull()
+            if (normalizedNumber != null) {
+                // Divide and format the result with two decimal places
+                val dividedPrice = normalizedNumber / divider
+                val formattedPrice = String.format(dividerFormat, dividedPrice)
+
+                // Construct the new price string with currency in the original position
+                "${currencyPrefix.trim()}$formattedPrice${currencySuffix.trim()}"
+            } else {
+                null // Return null if numeric conversion fails
+            }
+        } else {
+            null // Return null if the price format is not as expected
+        }
     }
 }
