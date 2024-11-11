@@ -94,8 +94,8 @@ enum class BillingEvent {
 <br/>You can also make use of provided `PriceUtil` object to format prices in various ways
 ``` kotlin
 // Get formatted price for a product
-val formattedPrice = getProductDetails(yourSkuName).getFormattedPrice() // formattedPrice: "16.80 EUR"
-val dividedPrice = getProductDetails(yourSkuName).getFormattedPriceDivided(4) // formattedPrice: "4.20 EUR"
+val formattedPrice = getProductDetails(yourSkuName).getFormattedPrice() // "16.80 EUR"
+val dividedPrice = getProductDetails(yourSkuName).getFormattedPriceDivided(4) // "4.20 EUR"
 ``` 
 
 ## Best practices
