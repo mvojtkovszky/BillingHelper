@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## 3.3.1 (TBD)
+*
+
 ## 3.3.0 (2024-11-11)
 * Added optional `subscriptionPurchaseParams` to `launchPurchaseFlow` method to unify subscription purchase definitions. 
   Added optional parameters `basePlanId: String?` and `offerId: String?`, which replaced old index parameters. 
