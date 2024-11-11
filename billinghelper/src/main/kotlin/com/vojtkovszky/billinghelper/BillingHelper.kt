@@ -259,44 +259,33 @@ class BillingHelper(
      *
      * @param activity An activity reference from which the billing flow will be launched.
      * @param productName Name of the IAP or Subscription we intend to purchase.
-     * @param subscriptionUpdateOldToken Google Play Billing purchase token that the user is upgrading or downgrading from.
-     *        See [https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.SubscriptionUpdateParams].
-     *        Note that [productName] must also be a subscription for this to take effect.
-     * @param subscriptionUpdateExternalTransactionId If the originating transaction for the subscription
-     *        that the user is upgrading or downgrading from was processed via alternative billing.
-     *        See [https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.SubscriptionUpdateParams.Builder#setOriginalExternalTransactionId(java.lang.String)].
-     * @param subscriptionUpdateReplacementMode Supported replacement modes to replace an existing subscription with a new one.
-     *        See [https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.SubscriptionUpdateParams.ReplacementMode].
+     * @param subscriptionParams Additional parameters often required for subscription purchases.
      * @param obfuscatedAccountId See
      *        [setObfuscatedAccountId](https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.Builder#setObfuscatedAccountId(java.lang.String)).
      * @param obfuscatedProfileId See
      *        [setObfuscatedProfileId](https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.Builder#setObfuscatedProfileId(java.lang.String)).
      * @param isOfferPersonalized See
      *        [setIsOfferPersonalized](https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.Builder#setIsOfferPersonalized(boolean)).
-     * @param selectedOfferIndex See [ProductDetails.SubscriptionOfferDetails].
      */
-    fun launchPurchaseFlow(activity: Activity,
-                           productName: String,
-                           subscriptionUpdateOldToken: String? = null,
-                           subscriptionUpdateExternalTransactionId: String? = null,
-                           subscriptionUpdateReplacementMode: Int? = null,
-                           obfuscatedAccountId: String? = null,
-                           obfuscatedProfileId: String? = null,
-                           isOfferPersonalized: Boolean? = null,
-                           selectedOfferIndex: Int = 0
+    fun launchPurchaseFlow(
+        activity: Activity,
+        productName: String,
+        subscriptionParams: SubscriptionPurchaseParams? = null,
+        obfuscatedAccountId: String? = null,
+        obfuscatedProfileId: String? = null,
+        isOfferPersonalized: Boolean? = null
     ) {
         val productDetailsForPurchase = getProductDetails(productName)
 
         if (billingClient.isReady && productDetailsForPurchase != null) {
-            val offerToken = selectedOfferIndex.let {
-                productDetailsForPurchase.subscriptionOfferDetails?.get(it)?.offerToken
-            }
-
             val productDetailsParams = BillingFlowParams.ProductDetailsParams.newBuilder().apply {
                 setProductDetails(productDetailsForPurchase)
-                // offer token required for subscriptions
+                // offer token required for subscription
                 if (productDetailsForPurchase.isSubscription()) {
-                    offerToken?.let { setOfferToken(offerToken) }
+                    (subscriptionParams ?: SubscriptionPurchaseParams())
+                        .getOfferToken(productDetailsForPurchase)?.let { token ->
+                            setOfferToken(token)
+                        }
                 }
             }.build()
 
@@ -305,24 +294,9 @@ class BillingHelper(
                 obfuscatedAccountId?.let { setObfuscatedAccountId(it) }
                 obfuscatedProfileId?.let { setObfuscatedProfileId(it) }
                 isOfferPersonalized?.let { setIsOfferPersonalized(it) }
-                // subscription update
-                if (subscriptionUpdateOldToken != null || subscriptionUpdateExternalTransactionId != null) {
-                    setSubscriptionUpdateParams(
-                        BillingFlowParams.SubscriptionUpdateParams
-                            .newBuilder()
-                            .apply {
-                                subscriptionUpdateOldToken?.let { token ->
-                                    setOldPurchaseToken(token)
-                                }
-                                subscriptionUpdateExternalTransactionId?.let { externalTransactionId ->
-                                    setOriginalExternalTransactionId(externalTransactionId)
-                                }
-                                subscriptionUpdateReplacementMode?.let { mode ->
-                                    setSubscriptionReplacementMode(mode)
-                                }
-                            }
-                            .build()
-                    )
+                // subscription update params
+                (subscriptionParams ?: SubscriptionPurchaseParams()).getSubscriptionUpdateParams()?.let {
+                    setSubscriptionUpdateParams(it)
                 }
             }.build()
 

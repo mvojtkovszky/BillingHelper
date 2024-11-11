@@ -91,6 +91,13 @@ enum class BillingEvent {
 }
 ```
 
+<br/>You can also make use of provided `PriceUtil` object to format prices in various ways
+``` kotlin
+// Get formatted price for a product
+val formattedPrice = getProductDetails(yourSkuName).getFormattedPrice() // formattedPrice: "16.80 EUR"
+val dividedPrice = getProductDetails(yourSkuName).getFormattedPriceDivided(4) // formattedPrice: "4.20 EUR"
+``` 
+
 ## Best practices
 Since library caches latest state of products and purchases as they are known to an instance based 
 on the data requested, it's suggested to rely on a **single instance** of BillingHelper in your app.
