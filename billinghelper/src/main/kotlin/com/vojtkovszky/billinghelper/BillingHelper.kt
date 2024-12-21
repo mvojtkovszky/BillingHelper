@@ -217,7 +217,7 @@ class BillingHelper(
      */
     fun getPurchaseWithProductName(productName: String): Purchase? {
         return try {
-            purchases.find { it.products.contains(productName) }
+            purchases.findLast { it.products.contains(productName) }
         } catch (e: Exception) {
             null
         }

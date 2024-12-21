@@ -1,7 +1,10 @@
 # CHANGELOG
 
 ## 3.3.1 (TBD)
-*
+* fix `ProductDetails.getFormattedPriceDivided` to cover cases where price is formatted using comma and dot.
+* fix ´getPurchaseWithProductName´ now finds last known purchase matching a `productName`. 
+  This resolved issue where a subscription purchase gets updated but returned purchase wasn't a latest one.
+* bump Kotlin to 2.0.21, Gradle plugin to 8.7.3
 
 ## 3.3.0 (2024-11-11)
 * Added optional `subscriptionPurchaseParams` to `launchPurchaseFlow` method to unify subscription purchase definitions. 
