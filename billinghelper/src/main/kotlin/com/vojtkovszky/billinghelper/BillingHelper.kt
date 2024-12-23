@@ -210,17 +210,12 @@ class BillingHelper(
     }
 
     /**
-     * Will return a single [Purchase] object that contains a given [productName] or null
-     * if no match found.
+     * Will return a single [Purchase] object that contains a given [productName] or empty if no match found.
      * Note that you need to query for owned purchases using [initQueryProductDetails] or complete a
      * purchase before, in order for this to be not null.
      */
-    fun getPurchaseWithProductName(productName: String): Purchase? {
-        return try {
-            purchases.findLast { it.products.contains(productName) }
-        } catch (e: Exception) {
-            null
-        }
+    fun getPurchasesWithProductName(productName: String): List<Purchase> {
+        return purchases.filter { it.products.contains(productName) }
     }
 
     /**
@@ -229,18 +224,14 @@ class BillingHelper(
      * for this not to be null.
      */
     fun getProductDetails(productName: String): ProductDetails? {
-        return try {
-            productDetailsList.find { it.productId == productName }
-        } catch (e: Exception) {
-            null
-        }
+        return productDetailsList.find { it.productId == productName }
     }
 
     /**
      * Determine whether product with given name has state set as purchased
      */
     fun isPurchased(productName: String): Boolean {
-        return getPurchaseWithProductName(productName)?.isPurchased() == true
+        return getPurchasesWithProductName(productName).lastOrNull()?.isPurchased() == true
     }
 
     /**
