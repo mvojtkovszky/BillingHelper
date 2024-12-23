@@ -41,13 +41,14 @@ class MainActivity: AppCompatActivity(), BillingListener {
 ``` kotlin
 fun consumePurchase(purchase: Purchase)
 fun endClientConnection()
-fun getPurchaseForProductName(productName: String): Purchase?
+fun getPurchasesForProductName(productName: String): List<Purchase>
 fun getProductDetails(productName: String): ProductDetails?
 fun isPurchased(productName: String): Boolean
 fun launchPurchaseFlow(activity: Activity, productName: String)
 fun initClientConnection(queryForProductDetailsOnConnected: Boolean, queryForOwnedPurchasesOnConected: Boolean)
 fun initQueryOwnedPurchases()
 fun initQueryProductDetails()
+fun initQueryPurchaseHistoryRecords()
 fun acknowledgePurchases(purchases: List<Purchase>)
 fun isFeatureSupported(feature: String)
 fun addBillingListener(listener: BillingListener)
@@ -55,6 +56,7 @@ fun removeBillingListener(listener: BillingListener)
 
 var querySkuDetailsOnConnected: Boolean
 var queryOwnedPurchasesOnConnected: Boolean
+var queryPurchaseHistoryRecordsOnConnected: Boolean
 var autoAcknowledgePurchases: Boolean
 var enableLogging: Boolean
 
@@ -65,6 +67,8 @@ val connectionState: Int
 var purchasesQueried: Boolean
     private set
 var productDetailsQueried: Boolean
+    private set
+var purchaseHistoryRecordsQueried: Boolean
     private set
 var isConnectionFailure: Boolean
     private set
@@ -81,6 +85,8 @@ enum class BillingEvent {
     QUERY_PRODUCT_DETAILS_FAILED,
     QUERY_OWNED_PURCHASES_COMPLETE,
     QUERY_OWNED_PURCHASES_FAILED,
+    QUERY_PURCHASES_HISTORY_RECORDS_COMPLETE,
+    QUERY_PURCHASES_HISTORY_RECORDS_FAILED,
     PURCHASE_COMPLETE,
     PURCHASE_FAILED,
     PURCHASE_CANCELLED,
