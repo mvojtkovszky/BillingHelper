@@ -6,6 +6,7 @@
   - `BillingEvent.QUERY_PURCHASES_HISTORY_RECORDS_COMPLETE` and `BillingEvent.QUERY_PURCHASES_HISTORY_RECORDS_FAILED`
   - `queryPurchaseHistoryRecordsOnConnected` in `BillingHelper` constructor
 * fix `ProductDetails.getFormattedPriceDivided` to cover cases where price is formatted using comma and dot.
+* rename `querySkuDetailsOnConnected` to `queryProductDetailsOnConnected`.
 * rename `getPurchaseWithProductName` to `getPurchasesForProductName` as multiple purchases can exist for a single product name.
   f.ex. when updating a subscription. Otherwise `.last()` is the one you're after.
 * bump Kotlin to 2.0.21, Gradle plugin to 8.7.3

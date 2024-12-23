@@ -11,7 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /**
- * Construct helper. By default, connection will be initialized immediately with sku details and
+ * Construct helper. By default, connection will be initialized immediately with product details and
  * owned purchases queried.
  * This convenience flow can be omitted by tweaking constructor parameters.
  *
@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
  * @param startConnectionImmediately set whether [initClientConnection] should be called automatically when [BillingHelper] is initialized.
  * @param key app's license key. If provided, it will be used to verify purchase signatures.
  * @param billingBuilderConfig additional configuration used when building [BillingClient]. Default covers most common use cases.
- * @param querySkuDetailsOnConnected set whether [initQueryProductDetails] should be called automatically right after client connects (when [initClientConnection] succeeds).
+ * @param queryProductDetailsOnConnected set whether [initQueryProductDetails] should be called automatically right after client connects (when [initClientConnection] succeeds).
  * @param queryOwnedPurchasesOnConnected set whether [initQueryOwnedPurchases] should be called automatically right after client connects (when [initClientConnection] succeeds).
  * @param queryPurchaseHistoryRecordsOnConnected set whether [initQueryPurchaseHistoryRecords] should be called automatically right after client connects (when [initClientConnection] succeeds).
  * @param autoAcknowledgePurchases All purchases require acknowledgement.
@@ -38,7 +38,7 @@ class BillingHelper(
     private val startConnectionImmediately: Boolean = true,
     private var key: String? = null,
     private var billingBuilderConfig: BillingBuilderConfig = BillingBuilderConfig(),
-    var querySkuDetailsOnConnected: Boolean = true,
+    var queryProductDetailsOnConnected: Boolean = true,
     var queryOwnedPurchasesOnConnected: Boolean = true,
     var queryPurchaseHistoryRecordsOnConnected: Boolean = false,
     var autoAcknowledgePurchases: Boolean = true,
@@ -53,7 +53,7 @@ class BillingHelper(
     private val purchases = mutableListOf<Purchase>()
     // represents purchase history records
     private val purchaseHistoryRecords = mutableListOf<PurchaseHistoryRecord>()
-    // represents details of all available sku details
+    // represents details of all available product details
     private val productDetailsList = mutableListOf<ProductDetails>()
     // callback listeners
     private val billingListeners = mutableListOf<BillingListener>()
@@ -66,7 +66,6 @@ class BillingHelper(
     var billingClient: BillingClient
         private set
 
-    // keep track if we've actually queried purchases and sku details
     /**
      * Determine if billingClient is ready. Based on [BillingClient.isReady]
      */
@@ -94,10 +93,10 @@ class BillingHelper(
         private set
 
     /**
-     * Determine if sku details have been successfully queried yet.
+     * Determine if product details have been successfully queried yet.
      * That happens with successful completion of [initQueryProductDetails].
      *
-     * Until sku details are queries any call to [launchPurchaseFlow] will fail.
+     * Until product details are queries any call to [launchPurchaseFlow] will fail.
      */
     var productDetailsQueried: Boolean = false
         private set
@@ -190,7 +189,11 @@ class BillingHelper(
         // immediately connect client, if allowed so, and pass our preferences for pending queries
         // once client connects
         if (startConnectionImmediately) {
-            initClientConnection(querySkuDetailsOnConnected, queryOwnedPurchasesOnConnected)
+            initClientConnection(
+                queryProductDetailsOnConnected = queryProductDetailsOnConnected,
+                queryOwnedPurchasesOnConnected = queryOwnedPurchasesOnConnected,
+                queryPurchaseHistoryRecordsOnConnected = queryPurchaseHistoryRecordsOnConnected
+            )
         }
     }
 
@@ -234,7 +237,7 @@ class BillingHelper(
 
     /**
      * Will return a single [ProductDetails] object with a given [productName] or null if no match found.
-     * Note that you need to query for sku details first using [initQueryOwnedPurchases] in order
+     * Note that you need to query for product details first using [initQueryOwnedPurchases] in order
      * for this not to be null.
      */
     fun getProductDetails(productName: String): ProductDetails? {
@@ -338,14 +341,14 @@ class BillingHelper(
      * Will initiate [BillingClient.startConnection]. If client is already connected, process
      * will be skipped and [BillingEvent.BILLING_CONNECTED] will be invoked.
      *
-     * @param querySkuDetailsOnConnected set whether [initQueryProductDetails] should be called
-     * right after client connects. Defaults to [BillingHelper.querySkuDetailsOnConnected]
+     * @param queryProductDetailsOnConnected set whether [initQueryProductDetails] should be called
+     * right after client connects. Defaults to [BillingHelper.queryProductDetailsOnConnected]
      * @param queryOwnedPurchasesOnConnected set whether [initQueryOwnedPurchases] should be called
      * right after client connects. Defaults to [BillingHelper.queryOwnedPurchasesOnConnected]
      * @param queryPurchaseHistoryRecordsOnConnected set whether [initQueryPurchaseHistoryRecords] should be called
      * right after client connects. Defaults to [BillingHelper.queryPurchaseHistoryRecordsOnConnected]
      */
-    fun initClientConnection(querySkuDetailsOnConnected: Boolean = this.querySkuDetailsOnConnected,
+    fun initClientConnection(queryProductDetailsOnConnected: Boolean = this.queryProductDetailsOnConnected,
                              queryOwnedPurchasesOnConnected: Boolean = this.queryOwnedPurchasesOnConnected,
                              queryPurchaseHistoryRecordsOnConnected: Boolean = this.queryPurchaseHistoryRecordsOnConnected) {
         if (billingClient.isReady) {
@@ -367,8 +370,8 @@ class BillingHelper(
                 )
                 // initialize queries on start, if allowed to do so
                 if (billingResult.isResponseOk()) {
-                    // query for sku details
-                    if (querySkuDetailsOnConnected) {
+                    // query for product details
+                    if (queryProductDetailsOnConnected) {
                         initQueryProductDetails()
                     }
                     // query for owned purchases
@@ -417,7 +420,7 @@ class BillingHelper(
      * Will query for both in-app purchases and subscriptions.
      * Result will be returned using [billingListeners]
      *
-     * Note if queryForSkuDetailsOnInit=true in the helper constructor, method gets called
+     * Note if queryProductDetailsOnConnected=true in the helper constructor, method gets called
      * automatically when client connects (See [BillingHelper] constructor for more info).
      */
     fun initQueryProductDetails() {
@@ -669,7 +672,7 @@ class BillingHelper(
         this.purchases.addAll(newPurchases)
     }
 
-    // get available sku based on SkuTypes based on skuInAppPurchases and skuSubscriptions availability
+    // get available types based on productInAppPurchases and productSubscriptions availability
     private fun getAvailableTypes(): List<String> {
         return mutableListOf<String>().apply {
             if (productInAppPurchases.isNullOrEmpty().not()) {
@@ -701,7 +704,7 @@ class BillingHelper(
     private fun getPurchaseFlowErrorMessage(productName: String): String {
         return when {
             !billingClient.isReady -> "Billing not ready."
-            !productDetailsQueried -> "SKU details have not been queried yet."
+            !productDetailsQueried -> "Product details have not been queried yet."
             else -> "productName $productName not recognized among product details."
         }
     }

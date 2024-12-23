@@ -31,7 +31,7 @@ fun ProductDetails.isInAppPurchase(): Boolean =
     productType == BillingClient.ProductType.INAPP
 
 /**
- * Determine if type is a subscription ([BillingClient.SkuType.SUBS])
+ * Determine if type is a subscription ([BillingClient.ProductType.SUBS])
  */
 fun ProductDetails.isSubscription(): Boolean =
     productType == BillingClient.ProductType.SUBS

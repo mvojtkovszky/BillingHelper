@@ -19,8 +19,8 @@ class MainActivity: AppCompatActivity(), BillingListener {
         // For more configuration options, check BillingHelper constructor parameters.
         billing = BillingHelper(
             context = this, 
-            productInAppPurchases = listOf("inAppPurchaseSkuName1", "inAppPurchaseSkuName2"),
-            productSubscriptions = listOf("subscriptionSkuName"),
+            productInAppPurchases = listOf("inAppPurchaseProductName1", "inAppPurchaseProductName2"),
+            productSubscriptions = listOf("subscriptionProductName"),
             billingListener = this
         )
     }
@@ -54,7 +54,7 @@ fun isFeatureSupported(feature: String)
 fun addBillingListener(listener: BillingListener)
 fun removeBillingListener(listener: BillingListener)
 
-var querySkuDetailsOnConnected: Boolean
+var queryProductDetailsOnConnected: Boolean
 var queryOwnedPurchasesOnConnected: Boolean
 var queryPurchaseHistoryRecordsOnConnected: Boolean
 var autoAcknowledgePurchases: Boolean
@@ -100,8 +100,8 @@ enum class BillingEvent {
 <br/>You can also make use of provided `PriceUtil` object to format prices in various ways
 ``` kotlin
 // Get formatted price for a product
-val formattedPrice = getProductDetails(yourSkuName).getFormattedPrice() // "16.80 EUR"
-val dividedPrice = getProductDetails(yourSkuName).getFormattedPriceDivided(4) // "4.20 EUR"
+val formattedPrice = getProductDetails(yourProductName).getFormattedPrice() // "16.80 EUR"
+val dividedPrice = getProductDetails(yourProductName).getFormattedPriceDivided(4) // "4.20 EUR"
 ``` 
 
 ## Best practices
