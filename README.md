@@ -41,7 +41,7 @@ class MainActivity: AppCompatActivity(), BillingListener {
 ``` kotlin
 fun consumePurchase(purchase: Purchase)
 fun endClientConnection()
-fun getPurchasesForProductName(productName: String): List<Purchase>
+fun getPurchasesWithProductName(productName: String): List<Purchase>
 fun getProductDetails(productName: String): ProductDetails?
 fun isPurchased(productName: String): Boolean
 fun launchPurchaseFlow(activity: Activity, productName: String)

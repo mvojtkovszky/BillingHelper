@@ -1,14 +1,14 @@
 # CHANGELOG
 
-## 3.4.0 (TBD)
+## 3.4.0 (2024-12-27)
 * add support for purchase history records. New methods and properties:
   - `BillingHelper.purchaseHistoryRecordsQueried`, `BillingHelper.initQueryPurchaseHistoryRecords` and `BillingHelper.getPurchaseHistoryRecords`
   - `BillingEvent.QUERY_PURCHASES_HISTORY_RECORDS_COMPLETE` and `BillingEvent.QUERY_PURCHASES_HISTORY_RECORDS_FAILED`
   - `queryPurchaseHistoryRecordsOnConnected` in `BillingHelper` constructor
 * fix `ProductDetails.getFormattedPriceDivided` to cover cases where price is formatted using comma and dot.
 * rename `querySkuDetailsOnConnected` to `queryProductDetailsOnConnected`.
-* rename `getPurchaseWithProductName` to `getPurchasesForProductName` as multiple purchases can exist for a single product name.
-  f.ex. when updating a subscription. Otherwise `.last()` is the one you're after.
+* rename `getPurchaseWithProductName` to `getPurchasesWithProductName` as multiple purchases can exist for a single product name.
+  (f.ex. when updating a subscription). Otherwise `.last()` is the one you're after.
 * bump Kotlin to 2.0.21, Gradle plugin to 8.7.3
 
 ## 3.3.0 (2024-11-11)
