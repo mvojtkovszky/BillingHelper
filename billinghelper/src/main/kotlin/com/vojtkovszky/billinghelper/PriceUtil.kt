@@ -70,16 +70,16 @@ fun ProductDetails.getFormattedPriceDivided(
         subscriptionPricingPhaseIndex
     )?.let { price ->
         // Regex to match currency before or after the numeric part, with comma or dot as decimal separator
-        val regex = """(\D*)\s*([\d,.]+)\s*(\D*)""".toRegex()
+        val regex = """(\D*)\s*([\d,\.]+)\s*(\D*)""".toRegex()
         val matchResult = regex.matchEntire(price)
 
         return if (matchResult != null) {
             val (currencyPrefix, numericPart, currencySuffix) = matchResult.destructured
 
-            // Clean numeric part by replacing comma with dot if needed and converting to Double
-            val normalizedNumber = numericPart.replace(",", ".").toDoubleOrNull()
+            // Clean numeric part by removing commas and replacing dot as decimal separator
+            val normalizedNumber = numericPart.replace(",", "").toDoubleOrNull()
             if (normalizedNumber != null) {
-                // Divide and format the result with two decimal places
+                // Divide and format the result with the given decimal format
                 val dividedPrice = normalizedNumber / divider
                 val formattedPrice = String.format(dividerFormat, dividedPrice)
 

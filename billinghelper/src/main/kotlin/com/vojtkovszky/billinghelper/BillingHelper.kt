@@ -6,9 +6,12 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.android.billingclient.api.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
- * Construct helper. By default, connection will be initialized immediately with sku details and
+ * Construct helper. By default, connection will be initialized immediately with product details and
  * owned purchases queried.
  * This convenience flow can be omitted by tweaking constructor parameters.
  *
@@ -18,8 +21,9 @@ import com.android.billingclient.api.*
  * @param startConnectionImmediately set whether [initClientConnection] should be called automatically when [BillingHelper] is initialized.
  * @param key app's license key. If provided, it will be used to verify purchase signatures.
  * @param billingBuilderConfig additional configuration used when building [BillingClient]. Default covers most common use cases.
- * @param querySkuDetailsOnConnected set whether [initQueryProductDetails] should be called automatically right after client connects (when [initClientConnection] succeeds).
+ * @param queryProductDetailsOnConnected set whether [initQueryProductDetails] should be called automatically right after client connects (when [initClientConnection] succeeds).
  * @param queryOwnedPurchasesOnConnected set whether [initQueryOwnedPurchases] should be called automatically right after client connects (when [initClientConnection] succeeds).
+ * @param queryPurchaseHistoryRecordsOnConnected set whether [initQueryPurchaseHistoryRecords] should be called automatically right after client connects (when [initClientConnection] succeeds).
  * @param autoAcknowledgePurchases All purchases require acknowledgement.
  * By default, this is handled automatically every time state of purchases changes.
  * If set to [Boolean.false], make sure [acknowledgePurchases] is used manually.
@@ -34,8 +38,9 @@ class BillingHelper(
     private val startConnectionImmediately: Boolean = true,
     private var key: String? = null,
     private var billingBuilderConfig: BillingBuilderConfig = BillingBuilderConfig(),
-    var querySkuDetailsOnConnected: Boolean = true,
+    var queryProductDetailsOnConnected: Boolean = true,
     var queryOwnedPurchasesOnConnected: Boolean = true,
+    var queryPurchaseHistoryRecordsOnConnected: Boolean = false,
     var autoAcknowledgePurchases: Boolean = true,
     var enableLogging: Boolean = false,
     billingListener: BillingListener? = null,
@@ -46,7 +51,9 @@ class BillingHelper(
 
     // represents list of all currently owned purchases
     private val purchases = mutableListOf<Purchase>()
-    // represents details of all available sku details
+    // represents purchase history records
+    private val purchaseHistoryRecords = mutableListOf<PurchaseHistoryRecord>()
+    // represents details of all available product details
     private val productDetailsList = mutableListOf<ProductDetails>()
     // callback listeners
     private val billingListeners = mutableListOf<BillingListener>()
@@ -59,7 +66,6 @@ class BillingHelper(
     var billingClient: BillingClient
         private set
 
-    // keep track if we've actually queried purchases and sku details
     /**
      * Determine if billingClient is ready. Based on [BillingClient.isReady]
      */
@@ -80,10 +86,17 @@ class BillingHelper(
         private set
 
     /**
-     * Determine if sku details have been successfully queried yet.
+     * Determine if purchase history records have been successfully queried yet.
+     * That happens with successful completion of [initQueryPurchaseHistoryRecords].
+     */
+    var purchaseHistoryRecordsQueried: Boolean = false
+        private set
+
+    /**
+     * Determine if product details have been successfully queried yet.
      * That happens with successful completion of [initQueryProductDetails].
      *
-     * Until sku details are queries any call to [launchPurchaseFlow] will fail.
+     * Until product details are queries any call to [launchPurchaseFlow] will fail.
      */
     var productDetailsQueried: Boolean = false
         private set
@@ -176,7 +189,11 @@ class BillingHelper(
         // immediately connect client, if allowed so, and pass our preferences for pending queries
         // once client connects
         if (startConnectionImmediately) {
-            initClientConnection(querySkuDetailsOnConnected, queryOwnedPurchasesOnConnected)
+            initClientConnection(
+                queryProductDetailsOnConnected = queryProductDetailsOnConnected,
+                queryOwnedPurchasesOnConnected = queryOwnedPurchasesOnConnected,
+                queryPurchaseHistoryRecordsOnConnected = queryPurchaseHistoryRecordsOnConnected
+            )
         }
     }
 
@@ -210,37 +227,28 @@ class BillingHelper(
     }
 
     /**
-     * Will return a single [Purchase] object that contains a given [productName] or null
-     * if no match found.
+     * Will return a single [Purchase] object that contains a given [productName] or empty if no match found.
      * Note that you need to query for owned purchases using [initQueryProductDetails] or complete a
      * purchase before, in order for this to be not null.
      */
-    fun getPurchaseWithProductName(productName: String): Purchase? {
-        return try {
-            purchases.find { it.products.contains(productName) }
-        } catch (e: Exception) {
-            null
-        }
+    fun getPurchasesWithProductName(productName: String): List<Purchase> {
+        return purchases.filter { it.products.contains(productName) }
     }
 
     /**
      * Will return a single [ProductDetails] object with a given [productName] or null if no match found.
-     * Note that you need to query for sku details first using [initQueryOwnedPurchases] in order
+     * Note that you need to query for product details first using [initQueryOwnedPurchases] in order
      * for this not to be null.
      */
     fun getProductDetails(productName: String): ProductDetails? {
-        return try {
-            productDetailsList.find { it.productId == productName }
-        } catch (e: Exception) {
-            null
-        }
+        return productDetailsList.find { it.productId == productName }
     }
 
     /**
      * Determine whether product with given name has state set as purchased
      */
     fun isPurchased(productName: String): Boolean {
-        return getPurchaseWithProductName(productName)?.isPurchased() == true
+        return getPurchasesWithProductName(productName).lastOrNull()?.isPurchased() == true
     }
 
     /**
@@ -251,6 +259,15 @@ class BillingHelper(
             if (isPurchased(productName)) return true
         }
         return false
+    }
+
+    /**
+     * Will return all [PurchaseHistoryRecord] containing a given [productName] or empty list if no match found.
+     * Note that you need to query for owned purchases using [initQueryPurchaseHistoryRecords] or complete a
+     * purchase in order for this to return non-empty.
+     */
+    fun getPurchaseHistoryRecords(productName: String): List<PurchaseHistoryRecord> {
+        return purchaseHistoryRecords.filter { it.products.contains(productName) }
     }
 
     /**
@@ -324,13 +341,16 @@ class BillingHelper(
      * Will initiate [BillingClient.startConnection]. If client is already connected, process
      * will be skipped and [BillingEvent.BILLING_CONNECTED] will be invoked.
      *
-     * @param querySkuDetailsOnConnected set whether [initQueryProductDetails] should be called
-     * right after client connects. Defaults to [BillingHelper.querySkuDetailsOnConnected]
+     * @param queryProductDetailsOnConnected set whether [initQueryProductDetails] should be called
+     * right after client connects. Defaults to [BillingHelper.queryProductDetailsOnConnected]
      * @param queryOwnedPurchasesOnConnected set whether [initQueryOwnedPurchases] should be called
      * right after client connects. Defaults to [BillingHelper.queryOwnedPurchasesOnConnected]
+     * @param queryPurchaseHistoryRecordsOnConnected set whether [initQueryPurchaseHistoryRecords] should be called
+     * right after client connects. Defaults to [BillingHelper.queryPurchaseHistoryRecordsOnConnected]
      */
-    fun initClientConnection(querySkuDetailsOnConnected: Boolean = this.querySkuDetailsOnConnected,
-                             queryOwnedPurchasesOnConnected: Boolean = this.queryOwnedPurchasesOnConnected) {
+    fun initClientConnection(queryProductDetailsOnConnected: Boolean = this.queryProductDetailsOnConnected,
+                             queryOwnedPurchasesOnConnected: Boolean = this.queryOwnedPurchasesOnConnected,
+                             queryPurchaseHistoryRecordsOnConnected: Boolean = this.queryPurchaseHistoryRecordsOnConnected) {
         if (billingClient.isReady) {
             invokeListener(BillingEvent.BILLING_CONNECTED, "BillingClient already connected, skipping.")
             return
@@ -350,13 +370,17 @@ class BillingHelper(
                 )
                 // initialize queries on start, if allowed to do so
                 if (billingResult.isResponseOk()) {
-                    // query for sku details
-                    if (querySkuDetailsOnConnected) {
+                    // query for product details
+                    if (queryProductDetailsOnConnected) {
                         initQueryProductDetails()
                     }
                     // query for owned purchases
                     if (queryOwnedPurchasesOnConnected) {
                         initQueryOwnedPurchases()
+                    }
+                    // query for purchase history records
+                    if (queryPurchaseHistoryRecordsOnConnected) {
+                        initQueryPurchaseHistoryRecords()
                     }
                 }
             }
@@ -380,11 +404,23 @@ class BillingHelper(
     }
 
     /**
+     * Initialize query for [PurchaseHistoryRecord]s listed for this app.
+     * Will query for both in-app purchases and subscriptions.
+     * Result will be returned using [billingListeners]
+     *
+     * Note if queryPurchaseHistoryRecords=true in the helper constructor, method gets called
+     * automatically when client connects (See [BillingHelper] constructor for more info).
+     */
+    fun initQueryPurchaseHistoryRecords() {
+        initQueryPurchaseHistoryRecordsForTypes(getAvailableTypes(), 0, mutableListOf())
+    }
+
+    /**
      * Initialize query for [ProductDetails] listed for this app.
      * Will query for both in-app purchases and subscriptions.
      * Result will be returned using [billingListeners]
      *
-     * Note if queryForSkuDetailsOnInit=true in the helper constructor, method gets called
+     * Note if queryProductDetailsOnConnected=true in the helper constructor, method gets called
      * automatically when client connects (See [BillingHelper] constructor for more info).
      */
     fun initQueryProductDetails() {
@@ -515,6 +551,56 @@ class BillingHelper(
         }
     }
 
+    // allows to call queryPurchaseHistory recursively on all types
+    private fun initQueryPurchaseHistoryRecordsForTypes(
+        types: List<String>,
+        currentTypeIndex: Int,
+        resultingList: MutableList<PurchaseHistoryRecord>
+    ) {
+        if (currentTypeIndex == types.size) {
+            purchaseHistoryRecords.clear()
+            purchaseHistoryRecords.addAll(resultingList)
+            purchasesQueried = true
+            invokeListener(
+                event = BillingEvent.QUERY_PURCHASES_HISTORY_RECORDS_COMPLETE,
+                message = resultingList.toString(),
+                responseCode = null
+            )
+            return
+        }
+
+        val currentType = types[currentTypeIndex]
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val purchaseHistoryResult = billingClient.queryPurchaseHistory(
+                    QueryPurchaseHistoryParams.newBuilder().setProductType(currentType).build()
+                )
+
+                if (purchaseHistoryResult.billingResult.isResponseOk()) {
+                    purchaseHistoryResult.purchaseHistoryRecordList?.let {
+                        resultingList.addAll(it)
+                    }
+                    initQueryPurchaseHistoryRecordsForTypes(types,
+                        currentTypeIndex + 1,
+                        resultingList
+                    )
+                } else {
+                    invokeListener(
+                        event = BillingEvent.QUERY_PURCHASES_HISTORY_RECORDS_FAILED,
+                        message = purchaseHistoryResult.billingResult.debugMessage,
+                        responseCode = purchaseHistoryResult.billingResult.responseCode
+                    )
+                }
+            } catch (e: Exception) {
+                invokeListener(
+                    event = BillingEvent.QUERY_PURCHASES_HISTORY_RECORDS_FAILED,
+                    message = e.message ?: "Unknown error",
+                    responseCode = BillingClient.BillingResponseCode.ERROR
+                )
+            }
+        }
+    }
+
     // allows to call queryProductDetailsAsync recursively on all types
     private fun initQueryProductDetailsForTypes(
         types: List<String>,
@@ -586,7 +672,7 @@ class BillingHelper(
         this.purchases.addAll(newPurchases)
     }
 
-    // get available sku based on SkuTypes based on skuInAppPurchases and skuSubscriptions availability
+    // get available types based on productInAppPurchases and productSubscriptions availability
     private fun getAvailableTypes(): List<String> {
         return mutableListOf<String>().apply {
             if (productInAppPurchases.isNullOrEmpty().not()) {
@@ -618,7 +704,7 @@ class BillingHelper(
     private fun getPurchaseFlowErrorMessage(productName: String): String {
         return when {
             !billingClient.isReady -> "Billing not ready."
-            !productDetailsQueried -> "SKU details have not been queried yet."
+            !productDetailsQueried -> "Product details have not been queried yet."
             else -> "productName $productName not recognized among product details."
         }
     }

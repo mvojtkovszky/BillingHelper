@@ -19,8 +19,8 @@ class MainActivity: AppCompatActivity(), BillingListener {
         // For more configuration options, check BillingHelper constructor parameters.
         billing = BillingHelper(
             context = this, 
-            productInAppPurchases = listOf("inAppPurchaseSkuName1", "inAppPurchaseSkuName2"),
-            productSubscriptions = listOf("subscriptionSkuName"),
+            productInAppPurchases = listOf("inAppPurchaseProductName1", "inAppPurchaseProductName2"),
+            productSubscriptions = listOf("subscriptionProductName"),
             billingListener = this
         )
     }
@@ -41,20 +41,22 @@ class MainActivity: AppCompatActivity(), BillingListener {
 ``` kotlin
 fun consumePurchase(purchase: Purchase)
 fun endClientConnection()
-fun getPurchaseForProductName(productName: String): Purchase?
+fun getPurchasesWithProductName(productName: String): List<Purchase>
 fun getProductDetails(productName: String): ProductDetails?
 fun isPurchased(productName: String): Boolean
 fun launchPurchaseFlow(activity: Activity, productName: String)
 fun initClientConnection(queryForProductDetailsOnConnected: Boolean, queryForOwnedPurchasesOnConected: Boolean)
 fun initQueryOwnedPurchases()
 fun initQueryProductDetails()
+fun initQueryPurchaseHistoryRecords()
 fun acknowledgePurchases(purchases: List<Purchase>)
 fun isFeatureSupported(feature: String)
 fun addBillingListener(listener: BillingListener)
 fun removeBillingListener(listener: BillingListener)
 
-var querySkuDetailsOnConnected: Boolean
+var queryProductDetailsOnConnected: Boolean
 var queryOwnedPurchasesOnConnected: Boolean
+var queryPurchaseHistoryRecordsOnConnected: Boolean
 var autoAcknowledgePurchases: Boolean
 var enableLogging: Boolean
 
@@ -65,6 +67,8 @@ val connectionState: Int
 var purchasesQueried: Boolean
     private set
 var productDetailsQueried: Boolean
+    private set
+var purchaseHistoryRecordsQueried: Boolean
     private set
 var isConnectionFailure: Boolean
     private set
@@ -81,6 +85,8 @@ enum class BillingEvent {
     QUERY_PRODUCT_DETAILS_FAILED,
     QUERY_OWNED_PURCHASES_COMPLETE,
     QUERY_OWNED_PURCHASES_FAILED,
+    QUERY_PURCHASES_HISTORY_RECORDS_COMPLETE,
+    QUERY_PURCHASES_HISTORY_RECORDS_FAILED,
     PURCHASE_COMPLETE,
     PURCHASE_FAILED,
     PURCHASE_CANCELLED,
@@ -94,8 +100,8 @@ enum class BillingEvent {
 <br/>You can also make use of provided `PriceUtil` object to format prices in various ways
 ``` kotlin
 // Get formatted price for a product
-val formattedPrice = getProductDetails(yourSkuName).getFormattedPrice() // formattedPrice: "16.80 EUR"
-val dividedPrice = getProductDetails(yourSkuName).getFormattedPriceDivided(4) // formattedPrice: "4.20 EUR"
+val formattedPrice = getProductDetails(yourProductName).getFormattedPrice() // "16.80 EUR"
+val dividedPrice = getProductDetails(yourProductName).getFormattedPriceDivided(4) // "4.20 EUR"
 ``` 
 
 ## Best practices
