@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## 3.4.1 (TBD)
+* 
+
 ## 3.4.0 (2024-12-27)
 * add support for purchase history records. New methods and properties:
   - `BillingHelper.purchaseHistoryRecordsQueried`, `BillingHelper.initQueryPurchaseHistoryRecords` and `BillingHelper.getPurchaseHistoryRecords`
