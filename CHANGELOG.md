@@ -1,7 +1,7 @@
 # CHANGELOG
 
 ## 3.4.1 (TBD)
-* 
+* bump Kotlin to 2.1.10, Gradle plugin to 8.9.0
 
 ## 3.4.0 (2024-12-27)
 * add support for purchase history records. New methods and properties:
