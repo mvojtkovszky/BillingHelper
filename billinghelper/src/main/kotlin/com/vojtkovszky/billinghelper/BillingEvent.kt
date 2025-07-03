@@ -46,16 +46,6 @@ enum class BillingEvent {
     QUERY_OWNED_PURCHASES_FAILED,
 
     /**
-     * Success from [BillingClient.queryPurchaseHistory]
-     */
-    QUERY_PURCHASES_HISTORY_RECORDS_COMPLETE,
-
-    /**
-     * Failure from [BillingClient.queryPurchaseHistory]
-     */
-    QUERY_PURCHASES_HISTORY_RECORDS_FAILED,
-
-    /**
      * Success from [BillingClient.launchBillingFlow]
      */
     PURCHASE_COMPLETE,
@@ -98,7 +88,7 @@ enum class BillingEvent {
     val isFailure: Boolean
         get() = listOf(
             BILLING_CONNECTION_FAILED, QUERY_PRODUCT_DETAILS_FAILED, QUERY_OWNED_PURCHASES_FAILED,
-            QUERY_PURCHASES_HISTORY_RECORDS_FAILED, PURCHASE_FAILED, CONSUME_PURCHASE_FAILED
+            PURCHASE_FAILED, CONSUME_PURCHASE_FAILED
         ).contains(this)
 
     /**
@@ -107,8 +97,7 @@ enum class BillingEvent {
     val isSuccess: Boolean
         get() = listOf(
             BILLING_CONNECTED, QUERY_PRODUCT_DETAILS_COMPLETE, QUERY_OWNED_PURCHASES_COMPLETE,
-            QUERY_PURCHASES_HISTORY_RECORDS_COMPLETE, PURCHASE_COMPLETE, PURCHASE_ACKNOWLEDGE_SUCCESS,
-            CONSUME_PURCHASE_SUCCESS
+            PURCHASE_COMPLETE, PURCHASE_ACKNOWLEDGE_SUCCESS, CONSUME_PURCHASE_SUCCESS
         ).contains(this)
 
     /**
@@ -162,14 +151,6 @@ enum class BillingEvent {
     val isQueryOwnedPurchasesFlow: Boolean
         get() = listOf(
             QUERY_OWNED_PURCHASES_COMPLETE, QUERY_OWNED_PURCHASES_FAILED
-        ).contains(this)
-
-    /**
-     * Determine if event belongs to query purchase history flow.
-     */
-    val isQueryPurchaseHistoryFlow: Boolean
-        get() = listOf(
-            QUERY_PURCHASES_HISTORY_RECORDS_COMPLETE, QUERY_PURCHASES_HISTORY_RECORDS_FAILED
         ).contains(this)
 
     /**

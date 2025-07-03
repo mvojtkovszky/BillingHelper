@@ -1,7 +1,10 @@
 # CHANGELOG
 
-## 3.4.1 (TBD)
-* bump Kotlin to 2.1.10, Gradle plugin to 8.9.0
+## 3.5.0 (TBD)
+* Removed deprecated query purchase history due to it being removed in v 8.0.0.
+* Add support for `enableAutoServiceReconnection` in `BillingBuilderConfig`. Enabled by default.
+* bump Google Billing to 8.0.0
+* bump Kotlin to 2.2.0, Gradle plugin to 8.11.0
 
 ## 3.4.0 (2024-12-27)
 * add support for purchase history records. New methods and properties:
