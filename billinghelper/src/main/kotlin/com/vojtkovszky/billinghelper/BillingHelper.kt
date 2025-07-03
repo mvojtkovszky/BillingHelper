@@ -22,7 +22,7 @@ import com.android.billingclient.api.*
  * @param queryOwnedPurchasesOnConnected set whether [initQueryOwnedPurchases] should be called automatically right after client connects (when [initClientConnection] succeeds).
  * @param autoAcknowledgePurchases All purchases require acknowledgement.
  * By default, this is handled automatically every time state of purchases changes.
- * If set to [Boolean.false], make sure [acknowledgePurchases] is used manually.
+ * If set to `false`, make sure [acknowledgePurchases] is used manually.
  * @param enableLogging toggle output of status logs
  * @param billingListener default listener that'll be added as [addBillingListener].
  */
@@ -68,6 +68,7 @@ class BillingHelper(
     /**
      * Retrieve [BillingClient.ConnectionState] from billingClient
      */
+    @BillingClient.ConnectionState
     val connectionState: Int
         get() = billingClient.connectionState
 
@@ -76,13 +77,6 @@ class BillingHelper(
      * That happens with successful completion of [initQueryOwnedPurchases].
      */
     var purchasesQueried: Boolean = false
-        private set
-
-    /**
-     * Determine if purchase history records have been successfully queried yet.
-     * That happens with successful completion of [initQueryPurchaseHistoryRecords].
-     */
-    var purchaseHistoryRecordsQueried: Boolean = false
         private set
 
     /**
@@ -114,7 +108,7 @@ class BillingHelper(
      *    This can happen if device is disconnected from Play services or user not logged in to the
      *    Play Store app.
      *
-     * In either case [Boolean.true] indicates that we did whatever we can to determine if purchases
+     * In either case `true` indicates that we did whatever we can to determine if purchases
      * are available and can consider this state final and presentable to the app.
      */
     val purchasesPresentable: Boolean
@@ -311,7 +305,8 @@ class BillingHelper(
                 invokeListener(
                     event = BillingEvent.PURCHASE_FAILED,
                     message = result.debugMessage,
-                    responseCode = result.responseCode
+                    responseCode = result.responseCode,
+                    subResponseCode = result.onPurchasesUpdatedSubResponseCode
                 )
             }
         } else {
@@ -398,7 +393,7 @@ class BillingHelper(
      * Conveniently determine if feature is supported by calling [BillingClient.isFeatureSupported]
      *
      * @param feature one of [BillingClient.FeatureType]
-     * @return [Boolean.true] if response is [BillingClient.BillingResponseCode.OK], [Boolean.false]
+     * @return `true` if response is [BillingClient.BillingResponseCode.OK], `false` otherwise
      * if response was [BillingClient.BillingResponseCode.FEATURE_NOT_SUPPORTED]
      */
     fun isFeatureSupported(feature: String): Boolean {
@@ -454,7 +449,12 @@ class BillingHelper(
     }
 
     // Invoke a listener on UI thread
-    private fun invokeListener(event: BillingEvent, message: String? = null, responseCode: Int? = null) {
+    private fun invokeListener(
+        event: BillingEvent,
+        message: String? = null,
+        @BillingClient.BillingResponseCode responseCode: Int? = null,
+        @BillingClient.OnPurchasesUpdatedSubResponseCode subResponseCode: Int? = null
+    ) {
         Handler(Looper.getMainLooper()).post {
             try {
                 if (enableLogging) {
@@ -463,7 +463,7 @@ class BillingHelper(
                 }
 
                 billingListeners.forEach {
-                    it.onBillingEvent(event, message, responseCode)
+                    it.onBillingEvent(event, message, responseCode, subResponseCode)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()

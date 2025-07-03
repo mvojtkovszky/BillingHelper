@@ -3,6 +3,7 @@
 ## 3.5.0 (TBD)
 * Removed deprecated query purchase history due to it being removed in v 8.0.0.
 * Add support for `enableAutoServiceReconnection` in `BillingBuilderConfig`. Enabled by default.
+* Add `subResponseCode` to `BillingListener.onBillingEvent` to support new sub response code that can be included with failed purchase flow result.
 * bump Google Billing to 8.0.0
 * bump Kotlin to 2.2.0, Gradle plugin to 8.11.0
 
