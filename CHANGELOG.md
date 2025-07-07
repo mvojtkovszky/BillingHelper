@@ -1,7 +1,8 @@
 # CHANGELOG
 
-## 4.0.1 (TBD)
-* 
+## 4.0.1 (2025-07-07)
+* Set `BillingBuilderConfig.enableAutoServiceReconnection` default to false and clarify its behaviour when combined with
+  `BillingHelper.startConnectionImmediately`, `BillingHelper.queryProductDetailsOnConnected` and `BillingHelper.queryOwnedPurchasesOnConnected`
 
 ## 4.0.0 (2025-07-07)
 * Removed deprecated query purchase history due to it being removed in Billing v8.0.0.

@@ -15,10 +15,13 @@ import com.android.billingclient.api.*
  * @param productInAppPurchases list of product names of in app purchases supported by the app.
  * @param productSubscriptions list of product names of subscriptions supported by the app.
  * @param startConnectionImmediately set whether [initClientConnection] should be called automatically when [BillingHelper] is initialized.
+ * Note this will not behave as intended if [BillingBuilderConfig.enableAutoServiceReconnection] is set to `true` as mentioned behaviour will already start the connection on init.
  * @param key app's license key. If provided, it will be used to verify purchase signatures.
  * @param billingBuilderConfig additional configuration used when building [BillingClient]. Default covers most common use cases.
  * @param queryProductDetailsOnConnected set whether [initQueryProductDetails] should be called automatically right after client connects (when [initClientConnection] succeeds).
+ * Note this will be ignored if [BillingBuilderConfig.enableAutoServiceReconnection] is set to `true`.
  * @param queryOwnedPurchasesOnConnected set whether [initQueryOwnedPurchases] should be called automatically right after client connects (when [initClientConnection] succeeds).
+ * Note this will be ignored if [BillingBuilderConfig.enableAutoServiceReconnection] is set to `true`.
  * @param autoAcknowledgePurchases All purchases require acknowledgement.
  * By default, this is handled automatically every time state of purchases changes.
  * If set to `false`, make sure [acknowledgePurchases] is used manually.
