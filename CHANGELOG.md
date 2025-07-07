@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## 3.5.0 (2025-07-07)
+## 4.0.0 (2025-07-07)
 * Removed deprecated query purchase history due to it being removed in Billing v8.0.0.
 * Add support for `enableAutoServiceReconnection` in `BillingBuilderConfig`. Enabled by default.
 * Add `subResponseCode` to `BillingListener.onBillingEvent` to support new sub response code that can be included with failed purchase flow result, added in Billing v8.0.0.
