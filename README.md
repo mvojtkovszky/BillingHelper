@@ -1,5 +1,5 @@
 # BillingHelper
-Simplify the use of Google Play Billing Library (v7.1.1). 
+Simplify the use of Google Play Billing Library (v8.0.0). 
 Handles client connection, querying product details, owned purchases, different purchase types, 
 acknowledging purchases, verify purchase signatures etc.
 
@@ -43,6 +43,7 @@ fun consumePurchase(purchase: Purchase)
 fun endClientConnection()
 fun getPurchasesWithProductName(productName: String): List<Purchase>
 fun getProductDetails(productName: String): ProductDetails?
+fun getUnfetchedProducts(): List<UnfetchedProduct>
 fun isPurchased(productName: String): Boolean
 fun launchPurchaseFlow(activity: Activity, productName: String)
 fun initClientConnection(queryForProductDetailsOnConnected: Boolean, queryForOwnedPurchasesOnConected: Boolean)
@@ -85,8 +86,6 @@ enum class BillingEvent {
     QUERY_PRODUCT_DETAILS_FAILED,
     QUERY_OWNED_PURCHASES_COMPLETE,
     QUERY_OWNED_PURCHASES_FAILED,
-    QUERY_PURCHASES_HISTORY_RECORDS_COMPLETE,
-    QUERY_PURCHASES_HISTORY_RECORDS_FAILED,
     PURCHASE_COMPLETE,
     PURCHASE_FAILED,
     PURCHASE_CANCELLED,

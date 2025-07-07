@@ -10,9 +10,9 @@ afterEvaluate {
             // Creates a Maven publication called "release".
             release(MavenPublication) {
                 from components.release
-                groupId project.properties['groupId']
-                artifactId project.properties['artifactId']
-                version project.properties['versionName']
+                groupId = project.properties['groupId']
+                artifactId = project.properties['artifactId']
+                version = project.properties['versionName']
                 artifact javadocJar
             }
         }
