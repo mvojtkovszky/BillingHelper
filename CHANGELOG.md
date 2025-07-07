@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 4.0.0 (2025-07-07)
+* Removed deprecated query purchase history due to it being removed in Billing v8.0.0.
+* Add support for `enableAutoServiceReconnection` in `BillingBuilderConfig`. Enabled by default.
+* Add `subResponseCode` to `BillingListener.onBillingEvent` to support new sub response code that can be included with failed purchase flow result, added in Billing v8.0.0.
+* Add `getUnfetchedProducts` to return products that cannot be fetched during `initQueryProductDetails`, added in Billing v8.0.0.
+* bump Google Billing to 8.0.0
+* bump Kotlin to 2.2.0, Gradle plugin to 8.11.0
+* bump buildToolsVersion 36.0.0, targetSdkVersion, compileSdkVersion to 36
+
 ## 3.4.0 (2024-12-27)
 * add support for purchase history records. New methods and properties:
   - `BillingHelper.purchaseHistoryRecordsQueried`, `BillingHelper.initQueryPurchaseHistoryRecords` and `BillingHelper.getPurchaseHistoryRecords`

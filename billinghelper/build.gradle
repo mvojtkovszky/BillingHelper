@@ -5,12 +5,12 @@ plugins {
 }
 
 android {
-    namespace 'com.vojtkovszky.billinghelper'
+    namespace = 'com.vojtkovszky.billinghelper'
 
     defaultConfig {
         minSdkVersion project.properties['minSdkVersion'] as Integer
         targetSdkVersion project.properties['targetSdkVersion'] as Integer
-        compileSdk project.properties['compileSdkVersion'] as Integer
+        compileSdk = project.properties['compileSdkVersion'] as Integer
         versionName project.properties['versionName'] as String
         buildToolsVersion = project.properties['buildToolsVersion'] as String
     }
@@ -24,25 +24,31 @@ android {
         targetCompatibility project.properties['javaVersion']
     }
 
-    kotlinOptions {
-        jvmTarget=project.properties['javaVersion']
-    }
-
     buildTypes {
         release {
             minifyEnabled false
         }
     }
+
+    kotlin {
+        compilerOptions {
+            jvmTarget = properties['javaVersion']
+        }
+    }
+
+    publishing {
+        singleVariant("release") {}
+    }
 }
 
 dependencies {
     /* https://developer.android.com/jetpack/androidx/releases/core */
-    implementation 'androidx.core:core-ktx:1.15.0'
+    implementation 'androidx.core:core-ktx:1.16.0'
     /*
     https://developer.android.com/google/play/billing/billing_library_overview
     https://developer.android.com/google/play/billing/release-notes
      */
-    api 'com.android.billingclient:billing-ktx:7.1.1'
+    api 'com.android.billingclient:billing-ktx:8.0.0'
 
     /* https://developer.android.com/jetpack/androidx/releases/test */
     testImplementation 'junit:junit:4.13.2'
