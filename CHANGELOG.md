@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## 4.0.2 (TBD)
+*
+
 ## 4.0.1 (2025-07-07)
 * Set `BillingBuilderConfig.enableAutoServiceReconnection` default to false and clarify its behaviour when combined with
   `BillingHelper.startConnectionImmediately`, `BillingHelper.queryProductDetailsOnConnected` and `BillingHelper.queryOwnedPurchasesOnConnected`
