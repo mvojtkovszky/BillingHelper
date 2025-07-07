@@ -8,8 +8,7 @@ import android.util.Log
 import com.android.billingclient.api.*
 
 /**
- * Construct helper. By default, connection will be initialized immediately with product details and
- * owned purchases queried.
+ * Construct helper. By default, connection will be initialized immediately with product details and owned purchases queried.
  * This convenience flow can be omitted by tweaking constructor parameters.
  *
  * @param context required to build [BillingClient].
@@ -48,6 +47,8 @@ class BillingHelper(
     private val purchases = mutableListOf<Purchase>()
     // represents details of all available product details
     private val productDetailsList = mutableListOf<ProductDetails>()
+    // represents products that were unable to be fetched
+    private val unfetchedProductList = mutableListOf<UnfetchedProduct>()
     // callback listeners
     private val billingListeners = mutableListOf<BillingListener>()
 
@@ -217,8 +218,9 @@ class BillingHelper(
 
     /**
      * Will return a single [Purchase] object that contains a given [productName] or empty if no match found.
-     * Note that you need to query for owned purchases using [initQueryProductDetails] or complete a
-     * purchase before, in order for this to be not null.
+     * Note that you need to query for owned purchases using [initQueryOwnedPurchases] or complete a
+     * purchase before, in order for this list to be populated.
+     * Also check [purchasesQueried] and [purchasesPresentable] indicators.
      */
     fun getPurchasesWithProductName(productName: String): List<Purchase> {
         return purchases.filter { it.products.contains(productName) }
@@ -226,15 +228,27 @@ class BillingHelper(
 
     /**
      * Will return a single [ProductDetails] object with a given [productName] or null if no match found.
-     * Note that you need to query for product details first using [initQueryOwnedPurchases] in order
+     * Note that you need to query for product details first using [initQueryProductDetails] in order
      * for this not to be null.
+     * Also check [productDetailsQueried] as indicator of query completion.
      */
     fun getProductDetails(productName: String): ProductDetails? {
         return productDetailsList.find { it.productId == productName }
     }
 
     /**
-     * Determine whether product with given name has state set as purchased
+     * Returns products that were unable to be fetched during query for product details.
+     * Note that you need to query for product details first using [initQueryProductDetails] in order for
+     * this list to be populated.
+     * Also check [productDetailsQueried] as indicator of query completion.
+     */
+    fun getUnfetchedProducts(): List<UnfetchedProduct> {
+        return unfetchedProductList
+    }
+
+    /**
+     * Determine whether product with given name has state set as purchased.
+     * Will check against [getPurchasesWithProductName] to determine state of the purchase.
      */
     fun isPurchased(productName: String): Boolean {
         return getPurchasesWithProductName(productName).lastOrNull()?.isPurchased() == true
@@ -242,6 +256,7 @@ class BillingHelper(
 
     /**
      * Determine if at least one product among given names has state set as purchased
+     * Will check against [getPurchasesWithProductName] to determine state of the purchase.
      */
     fun isPurchasedAnyOf(vararg productNames: String): Boolean {
         for (productName in productNames) {
@@ -386,7 +401,7 @@ class BillingHelper(
      * automatically when client connects (See [BillingHelper] constructor for more info).
      */
     fun initQueryProductDetails() {
-        initQueryProductDetailsForTypes(getAvailableTypes(), 0, mutableListOf())
+        initQueryProductDetailsForTypes(getAvailableTypes(), 0, mutableListOf(), mutableListOf())
     }
 
     /**
@@ -522,19 +537,23 @@ class BillingHelper(
     private fun initQueryProductDetailsForTypes(
         types: List<String>,
         currentTypeIndex: Int,
-        resultingList: MutableList<ProductDetails>) {
-
+        productDetailsList: MutableList<ProductDetails>,
+        unfetchedProductList: MutableList<UnfetchedProduct>
+    ) {
         // handled all types
         if (currentTypeIndex == types.size) {
             // repopulate product details list
             this.productDetailsList.clear()
-            this.productDetailsList.addAll(resultingList)
+            this.productDetailsList.addAll(productDetailsList)
+            // repopulate unfetched product list
+            this.unfetchedProductList.clear()
+            this.unfetchedProductList.addAll(unfetchedProductList)
             // mark as queried
             this.productDetailsQueried = true
             // invoke callback
             invokeListener(
                 event = BillingEvent.QUERY_PRODUCT_DETAILS_COMPLETE,
-                message = resultingList.toString()
+                message = "Products details: $productDetailsList \nUnfetched products: $unfetchedProductList"
             )
         }
         // query for type on current index
@@ -554,8 +573,10 @@ class BillingHelper(
             val params = QueryProductDetailsParams.newBuilder().setProductList(products)
             billingClient.queryProductDetailsAsync(params.build()) { queryResult: BillingResult, queryProductDetailsListResult: QueryProductDetailsResult ->
                 if (queryResult.isResponseOk()) {
-                    resultingList.addAll(queryProductDetailsListResult.productDetailsList)
-                    initQueryProductDetailsForTypes(types, currentTypeIndex+1, resultingList)
+                    productDetailsList.addAll(queryProductDetailsListResult.productDetailsList)
+                    unfetchedProductList.addAll(queryProductDetailsListResult.unfetchedProductList)
+                    // recursive call with next type
+                    initQueryProductDetailsForTypes(types, currentTypeIndex+1, productDetailsList, unfetchedProductList)
                 } else {
                     invokeListener(
                         event = BillingEvent.QUERY_PRODUCT_DETAILS_FAILED,
