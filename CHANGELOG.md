@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## 4.0.1 (TBD)
+* 
+
 ## 4.0.0 (2025-07-07)
 * Removed deprecated query purchase history due to it being removed in Billing v8.0.0.
 * Add support for `enableAutoServiceReconnection` in `BillingBuilderConfig`. Enabled by default.
