@@ -5,12 +5,12 @@ plugins {
 }
 
 android {
-    namespace 'com.vojtkovszky.billinghelper'
+    namespace = 'com.vojtkovszky.billinghelper'
 
     defaultConfig {
         minSdkVersion project.properties['minSdkVersion'] as Integer
         targetSdkVersion project.properties['targetSdkVersion'] as Integer
-        compileSdk project.properties['compileSdkVersion'] as Integer
+        compileSdk = project.properties['compileSdkVersion'] as Integer
         versionName project.properties['versionName'] as String
         buildToolsVersion = project.properties['buildToolsVersion'] as String
     }
@@ -24,14 +24,20 @@ android {
         targetCompatibility project.properties['javaVersion']
     }
 
-    kotlinOptions {
-        jvmTarget=project.properties['javaVersion']
-    }
-
     buildTypes {
         release {
             minifyEnabled false
         }
+    }
+
+    kotlin {
+        compilerOptions {
+            jvmTarget = properties['javaVersion']
+        }
+    }
+
+    publishing {
+        singleVariant("release") {}
     }
 }
 
