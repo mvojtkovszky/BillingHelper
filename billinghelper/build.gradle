@@ -44,6 +44,21 @@ android {
     }
 }
 
+
+afterEvaluate {
+    publishing {
+        publications {
+            // Creates a Maven publication called "release".
+            create("release", MavenPublication) {
+                from components.getByName("release")
+                groupId = project.properties['groupId']
+                artifactId = project.properties['artifactId']
+                version = project.properties['versionName']
+            }
+        }
+    }
+}
+
 dependencies {
     /* https://developer.android.com/jetpack/androidx/releases/core */
     implementation 'androidx.core:core-ktx:1.16.0'
@@ -58,5 +73,3 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
 }
-
-apply from: "$rootDir/gradle-mvn-push.gradle"
