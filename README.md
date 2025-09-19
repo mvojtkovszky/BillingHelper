@@ -49,7 +49,6 @@ fun launchPurchaseFlow(activity: Activity, productName: String)
 fun initClientConnection(queryForProductDetailsOnConnected: Boolean, queryForOwnedPurchasesOnConected: Boolean)
 fun initQueryOwnedPurchases()
 fun initQueryProductDetails()
-fun initQueryPurchaseHistoryRecords()
 fun acknowledgePurchases(purchases: List<Purchase>)
 fun isFeatureSupported(feature: String)
 fun addBillingListener(listener: BillingListener)
@@ -68,8 +67,6 @@ val connectionState: Int
 var purchasesQueried: Boolean
     private set
 var productDetailsQueried: Boolean
-    private set
-var purchaseHistoryRecordsQueried: Boolean
     private set
 var isConnectionFailure: Boolean
     private set

@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 4.0.2 (2025-09-19)
+* Fix missing sources and documentation
+* Bump java version to 21, Gradle plugin to 8.13.0
+
 ## 4.0.1 (2025-07-07)
 * Set `BillingBuilderConfig.enableAutoServiceReconnection` default to false and clarify its behaviour when combined with
   `BillingHelper.startConnectionImmediately`, `BillingHelper.queryProductDetailsOnConnected` and `BillingHelper.queryOwnedPurchasesOnConnected`
