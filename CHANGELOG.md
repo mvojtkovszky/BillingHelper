@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## 4.0.3 (TBD)
+* 
+
 ## 4.0.2 (2025-09-19)
 * Fix missing sources and documentation
 * Bump java version to 21, Gradle plugin to 8.13.0
