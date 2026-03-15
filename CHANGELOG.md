@@ -96,7 +96,7 @@
 ## 1.9.0 (2022-02-01)
 * add `isConnectionFailure` and `purchasesQueriedOrConnectionFailure`.
 * fix `purchasesQueried` and `skuDetailsQueried` now change after lists get updated instead of before
-* bump kotlin to 1.6.10, gradle to 7.1.0, build tools and target sdk to 31, core-ktx to 1.7.0
+* bump kotlin to 1.6.10, Gradle to 7.1.0, build tools and target sdk to 31, core-ktx to 1.7.0
 
 ## 1.8.0 (2021-10-07)
 * add purchase verification based on app's license key
@@ -128,7 +128,7 @@
 * add `BillingEvent` helper methods
 * add `connectionState` getter
 * add `isFeatureSupported()`
-* fix issue where `SkuDetails.isSubscription()` would return for in app purchase
+* fix issue where `SkuDetails.isSubscription()` would return for in-app purchase
 * remove jCenter() and add mavenCentral
 * bump Google Billing to 4.0.0
 * bump Kotlin to 1.5.10, Gradle plugin to 4.2.1
@@ -143,7 +143,7 @@
 * bump Kotlin to 1.4.20 and Gradle plugin to 4.1.1
 
 ## 1.3.1 (2020-11-04)
-* disable minify for release build types so javadoc can be created
+* disable minify for release build types so Javadoc can be created
 
 ## 1.3.0 (2020-11-03)
 * rename `endBillingClientConnection()` to `endClientConnection()` to stay persistent with  initClientConnection()

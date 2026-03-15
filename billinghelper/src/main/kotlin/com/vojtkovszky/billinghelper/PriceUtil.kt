@@ -38,7 +38,7 @@ internal object PriceUtil {
 
         // Detect decimal separator and decimal places from the original numeric string.
         // The last occurrence of '.' or ',' is the decimal separator IF followed by
-        // exactly 1-2 digits (typical for currency). Otherwise there are no decimals
+        // exactly 1-2 digits (typical for currency). Otherwise, there are no decimals
         // (e.g. JPY "¥1,680").
         val lastDotIdx = numericPart.lastIndexOf('.')
         val lastCommaIdx = numericPart.lastIndexOf(',')
