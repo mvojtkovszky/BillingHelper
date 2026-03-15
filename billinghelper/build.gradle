@@ -1,6 +1,5 @@
 plugins {
     id 'com.android.library'
-    id 'kotlin-android'
     id 'org.jetbrains.dokka'
     id 'org.jetbrains.dokka-javadoc'
     id 'maven-publish'
@@ -65,14 +64,33 @@ tasks.register('dokkaJavadocJar', Jar) {
     from(layout.buildDirectory.dir('dokka/javadoc'))
 }
 
+def localProperties = new Properties()
+localProperties.load(rootProject.file("local.properties").newDataInputStream())
+def androidSdkDir = localProperties.getProperty("sdk.dir") ?: System.getenv("ANDROID_HOME")
+
+dokka {
+    moduleName.set("BillingHelper")
+
+    dokkaSourceSets.register("main") {
+        sourceRoots.from(file("src/main/kotlin"))
+        classpath.from(
+            configurations.releaseCompileClasspath.incoming.artifactView {
+                attributes { attribute(Attribute.of("artifactType", String), "android-classes-jar") }
+                lenient(true)
+            }.files
+        )
+        classpath.from(file("${androidSdkDir}/platforms/android-${project.properties['compileSdkVersion']}/android.jar"))
+    }
+}
+
 dependencies {
     /* https://developer.android.com/jetpack/androidx/releases/core */
-    implementation 'androidx.core:core-ktx:1.17.0'
+    implementation 'androidx.core:core-ktx:1.18.0'
     /*
     https://developer.android.com/google/play/billing/billing_library_overview
     https://developer.android.com/google/play/billing/release-notes
      */
-    api 'com.android.billingclient:billing-ktx:8.0.0'
+    api 'com.android.billingclient:billing-ktx:8.3.0'
 
     /* https://developer.android.com/jetpack/androidx/releases/test */
     testImplementation 'junit:junit:4.13.2'
