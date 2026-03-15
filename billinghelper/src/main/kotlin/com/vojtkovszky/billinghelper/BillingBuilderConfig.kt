@@ -1,6 +1,7 @@
 package com.vojtkovszky.billinghelper
 
 import com.android.billingclient.api.BillingClient
+import com.android.billingclient.api.EnableBillingProgramParams
 import com.android.billingclient.api.UserChoiceBillingListener
 
 /**
@@ -8,8 +9,10 @@ import com.android.billingclient.api.UserChoiceBillingListener
  *
  * @param enableAlternativeBillingOnly build client with [BillingClient.Builder.enableAlternativeBillingOnly]
  * For more info see [https://developer.android.com/reference/com/android/billingclient/api/BillingClient.Builder#enableAlternativeBillingOnly()]
- * @param enableExternalOffer build client with [BillingClient.Builder.enableExternalOffer]
- * For more info see [https://developer.android.com/reference/com/android/billingclient/api/BillingClient.Builder#enableExternalOffer()]
+ * @param enableBillingProgramParams if provided, [BillingClient.Builder.enableBillingProgram] will be called when building the client.
+ * This replaces the deprecated `enableExternalOffer` builder method. Supports external offers, external content links,
+ * and external payments programs via [EnableBillingProgramParams].
+ * For more info see [https://developer.android.com/google/play/billing/external-offers]
  * @param enablePendingPurchasesOneTimeProducts build client [BillingClient.Builder.enablePendingPurchases] with pending purchase for one-time products enabled
  * For more info see [https://developer.android.com/reference/com/android/billingclient/api/PendingPurchasesParams.Builder#enableOneTimeProducts()]
  * @param enablePendingPurchasesPrepaidPlans build client [BillingClient.Builder.enablePendingPurchases] with pending purchase for prepaid plans enabled
@@ -25,7 +28,7 @@ import com.android.billingclient.api.UserChoiceBillingListener
  */
 class BillingBuilderConfig(
     val enableAlternativeBillingOnly: Boolean = false,
-    val enableExternalOffer: Boolean = false,
+    val enableBillingProgramParams: EnableBillingProgramParams? = null,
     val enablePendingPurchasesOneTimeProducts: Boolean = true,
     val enablePendingPurchasesPrepaidPlans: Boolean = true,
     val enableAutoServiceReconnection: Boolean = false,

@@ -197,7 +197,7 @@ fun ProductDetails.getFormattedPrice(
 
 /**
  * Same as [getFormattedPrice], but apply divider to the actual price.
- * Uses [priceAmountMicros] from the billing API for precise arithmetic, then
+ * Uses priceAmountMicros from the billing API for precise arithmetic, then
  * reconstructs the formatted price preserving the original locale formatting
  * (currency position, decimal separator, grouping separator, spacing).
  *

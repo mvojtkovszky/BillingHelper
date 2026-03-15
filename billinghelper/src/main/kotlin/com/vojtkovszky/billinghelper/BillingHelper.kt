@@ -137,8 +137,8 @@ class BillingHelper(
                 if (billingBuilderConfig.enableAlternativeBillingOnly) {
                     enableAlternativeBillingOnly()
                 }
-                if (billingBuilderConfig.enableExternalOffer) {
-                    enableExternalOffer()
+                billingBuilderConfig.enableBillingProgramParams?.let {
+                    enableBillingProgram(it)
                 }
                 if (billingBuilderConfig.enablePendingPurchasesPrepaidPlans ||
                     billingBuilderConfig.enablePendingPurchasesOneTimeProducts) {
@@ -302,6 +302,11 @@ class BillingHelper(
                             setOfferToken(token)
                         }
                 }
+                // subscription product replacement params (replacement mode at product level)
+                (subscriptionParams ?: SubscriptionPurchaseParams())
+                    .getSubscriptionProductReplacementParams()?.let {
+                        setSubscriptionProductReplacementParams(it)
+                    }
             }.build()
 
             val billingFlowParams = BillingFlowParams.newBuilder().apply {
@@ -388,11 +393,15 @@ class BillingHelper(
      * Will query for both in-app purchases and subscriptions.
      * Result will be returned using [billingListeners] after [purchases] is updated.
      *
+     * @param includeSuspendedSubscriptions if true, suspended subscriptions will be included when
+     * querying for subscriptions. Suspended subscriptions are still attributed to the user but are
+     * not active. Check [Purchase.isSuspended] to identify them. Defaults to false.
+     *
      * Note if queryForOwnedPurchasesOnInit=true in the helper constructor, method gets called
      * automatically when client connects (See [BillingHelper] constructor for more info).
      */
-    fun initQueryOwnedPurchases() {
-        initQueryOwnedPurchasesForTypes(getAvailableTypes(), 0, mutableListOf())
+    fun initQueryOwnedPurchases(includeSuspendedSubscriptions: Boolean = false) {
+        initQueryOwnedPurchasesForTypes(getAvailableTypes(), 0, mutableListOf(), includeSuspendedSubscriptions)
     }
 
     /**
@@ -495,7 +504,8 @@ class BillingHelper(
     private fun initQueryOwnedPurchasesForTypes(
         types: List<String>,
         currentTypeIndex: Int,
-        resultingList: MutableList<Purchase>) {
+        resultingList: MutableList<Purchase>,
+        includeSuspendedSubscriptions: Boolean) {
 
         // handled all types
         if (currentTypeIndex == types.size) {
@@ -519,12 +529,18 @@ class BillingHelper(
         // query for type on current index
         else {
             val currentType = types[currentTypeIndex]
-            billingClient.queryPurchasesAsync(
-                QueryPurchasesParams.newBuilder().setProductType(currentType).build()
-            ) { queryResult, purchases ->
+            val queryParams = QueryPurchasesParams.newBuilder()
+                .setProductType(currentType)
+                .apply {
+                    if (includeSuspendedSubscriptions && currentType == BillingClient.ProductType.SUBS) {
+                        includeSuspendedSubscriptions(true)
+                    }
+                }
+                .build()
+            billingClient.queryPurchasesAsync(queryParams) { queryResult, purchases ->
                 if (queryResult.isResponseOk()) {
                     resultingList.addAll(purchases)
-                    initQueryOwnedPurchasesForTypes(types, currentTypeIndex+1, resultingList)
+                    initQueryOwnedPurchasesForTypes(types, currentTypeIndex+1, resultingList, includeSuspendedSubscriptions)
                 } else {
                     invokeListener(
                         event = BillingEvent.QUERY_OWNED_PURCHASES_FAILED,

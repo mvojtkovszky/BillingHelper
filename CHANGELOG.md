@@ -1,7 +1,13 @@
 # CHANGELOG
 
-## 4.0.3 (TBD)
-* 
+## 4.1.0 (TBD)
+* fix `PriceUtil.getFormattedPrice` and `PriceUtil.getFormattedPriceDivided` to cover all locales and formatting variants.
+* replace deprecated `BillingBuilderConfig.enableExternalOffer` with `enableBillingProgramParams`, supporting external offers, external content links, and external payments programs.
+* replace deprecated `SubscriptionPurchaseParams.updateReplacementMode` with `replacementMode` and `replacementOldProductId`, using the new product-level `SubscriptionProductReplacementParams` API.
+* add `includeSuspendedSubscriptions` parameter to `initQueryOwnedPurchases()` for querying suspended subscriptions.
+* `minSdkVersion` has been raised from 21 to 23.
+* bump Google Billing to 8.3.0
+* bump Gradle plugin to 9.1.0, Kotlin to 2.3.10
 
 ## 4.0.2 (2025-09-19)
 * Fix missing sources and documentation
