@@ -1,5 +1,5 @@
 # BillingHelper
-Simplify the use of Google Play Billing Library (v8.3.0). 
+Simplify the use of Google Play Billing Library (v9.0.0). 
 Handles client connection, querying product details, owned purchases, different purchase types, 
 acknowledging purchases, verify purchase signatures etc.
 

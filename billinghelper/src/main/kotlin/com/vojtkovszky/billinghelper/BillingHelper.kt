@@ -175,8 +175,14 @@ class BillingHelper(
                     billingResult.isResponseUserCancelled() -> BillingEvent.PURCHASE_CANCELLED
                     else -> BillingEvent.PURCHASE_FAILED
                 }
-                // send callback complete
-                invokeListener(billingEvent, billingResult.debugMessage, billingResult.responseCode)
+                // send callback complete. Forward the sub-response code (new in Billing v9, e.g.
+                // PAYMENT_DECLINED_DUE_TO_INSUFFICIENT_FUNDS, USER_INELIGIBLE) so listeners can react to it.
+                invokeListener(
+                    event = billingEvent,
+                    message = billingResult.debugMessage,
+                    responseCode = billingResult.responseCode,
+                    subResponseCode = billingResult.onPurchasesUpdatedSubResponseCode
+                )
             }
             .build()
 

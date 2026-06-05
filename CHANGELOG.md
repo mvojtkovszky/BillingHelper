@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 4.2.0 (2026-06-05)
+* forward `subResponseCode` (new Billing v9 sub-response codes, e.g. `PAYMENT_DECLINED_DUE_TO_INSUFFICIENT_FUNDS`, `USER_INELIGIBLE`) in the async `PurchasesUpdatedListener` callback, not only on the synchronous `launchBillingFlow` failure.
+* bump Google Billing to 9.0.0
+* bump Gradle to 9.5.1, Gradle plugin to 9.2.1, Kotlin to 2.4.0, Dokka to 2.2.0
+* bump `androidx.core` to 1.19.0
+
 ## 4.1.0 (2026-03-15)
 * fix `PriceUtil.getFormattedPrice` and `PriceUtil.getFormattedPriceDivided` to cover all locales and formatting variants.
 * replace deprecated `BillingBuilderConfig.enableExternalOffer` with `enableBillingProgramParams`, supporting external offers, external content links, and external payments programs.
