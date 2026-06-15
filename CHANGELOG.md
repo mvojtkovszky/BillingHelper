@@ -5,6 +5,7 @@
 * bump Google Billing to 9.0.0
 * bump Gradle to 9.5.1, Gradle plugin to 9.2.1, Kotlin to 2.4.0, Dokka to 2.2.0
 * bump `androidx.core` to 1.19.0
+* bump buildToolsVersion and compileSdkVersion to 37
 
 ## 4.1.0 (2026-03-15)
 * fix `PriceUtil.getFormattedPrice` and `PriceUtil.getFormattedPriceDivided` to cover all locales and formatting variants.
