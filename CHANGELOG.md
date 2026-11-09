@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## 4.3.0 (2026-11-09)
+* fix owned purchases being matched by `orderId`, which is missing on pending purchases: two pending purchases replaced each other and a pending purchase that completed was kept twice. Purchases are now matched by `purchaseToken`.
+* fix `consumePurchase` leaving the consumed purchase owned (`isPurchased` stayed `true`) until owned purchases were queried again.
+* fix `launchPurchaseFlow` crashing when no subscription offer matches `basePlanId` / `offerId`; it now reports `BillingEvent.PURCHASE_FAILED`.
+* fix a listener removing itself (or another listener) from its callback keeping the event from the remaining listeners. A listener that throws no longer stops the others either.
+* fix owned purchases and product details briefly reading as empty while being refreshed, and `getUnfetchedProducts` returning a list that changes later. State is now replaced as a whole and safe to read from any thread.
+* add unit tests for purchase list handling, subscription offer selection, product type extensions and `BillingEvent` helpers.
+* bump Google Billing to 9.1.0
+* bump Gradle to 9.9.0, Gradle plugin to 9.5.1, Kotlin to 2.4.21, Dokka to 2.3.0
+* bump `androidx.core` to 1.19.1
+* replace deprecated `Project.getProperties` use in the build script; set the Gradle daemon JVM to 25
+
 ## 4.2.0 (2026-06-15)
 * forward `subResponseCode` (new Billing v9 sub-response codes, e.g. `PAYMENT_DECLINED_DUE_TO_INSUFFICIENT_FUNDS`, `USER_INELIGIBLE`) in the async `PurchasesUpdatedListener` callback, not only on the synchronous `launchBillingFlow` failure.
 * bump Google Billing to 9.0.0

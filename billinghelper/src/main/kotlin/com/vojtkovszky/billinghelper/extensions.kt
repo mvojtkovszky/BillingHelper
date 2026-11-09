@@ -35,3 +35,20 @@ fun ProductDetails.isInAppPurchase(): Boolean =
  */
 fun ProductDetails.isSubscription(): Boolean =
     productType == BillingClient.ProductType.SUBS
+
+/*
+ * Owned purchases are identified by purchase token: it stays the same while a purchase moves from
+ * pending to purchased, while orderId is missing for pending purchases.
+ */
+
+// all purchases containing the given product
+internal fun List<Purchase>.withProduct(productName: String): List<Purchase> =
+    filter { it.products.contains(productName) }
+
+// this list with the given purchase added at the end, replacing an older copy of the same purchase
+internal fun List<Purchase>.withPurchase(purchase: Purchase): List<Purchase> =
+    filter { it.purchaseToken != purchase.purchaseToken } + purchase
+
+// this list without the purchase with the given token
+internal fun List<Purchase>.withoutPurchase(purchaseToken: String): List<Purchase> =
+    filter { it.purchaseToken != purchaseToken }

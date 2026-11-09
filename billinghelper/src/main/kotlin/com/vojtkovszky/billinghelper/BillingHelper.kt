@@ -6,6 +6,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.android.billingclient.api.*
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * Construct helper. By default, connection will be initialized immediately with product details and owned purchases queried.
@@ -46,14 +47,20 @@ class BillingHelper(
         private const val TAG = "BillingHelper"
     }
 
+    // Billing callbacks can arrive on other threads than the readers, so state is kept in
+    // immutable lists that are swapped as a whole, never cleared and refilled in place.
     // represents list of all currently owned purchases
-    private val purchases = mutableListOf<Purchase>()
+    @Volatile
+    private var purchases: List<Purchase> = emptyList()
     // represents details of all available product details
-    private val productDetailsList = mutableListOf<ProductDetails>()
+    @Volatile
+    private var productDetailsList: List<ProductDetails> = emptyList()
     // represents products that were unable to be fetched
-    private val unfetchedProductList = mutableListOf<UnfetchedProduct>()
-    // callback listeners
-    private val billingListeners = mutableListOf<BillingListener>()
+    @Volatile
+    private var unfetchedProductList: List<UnfetchedProduct> = emptyList()
+    // callback listeners. Copy-on-write so a listener can add or remove listeners from its own
+    // callback, and listeners can be changed from any thread.
+    private val billingListeners = CopyOnWriteArrayList<BillingListener>()
 
     /**
      * Reference to the main [BillingClient]. Initialized in [BillingHelper] init.
@@ -205,6 +212,10 @@ class BillingHelper(
                 .setPurchaseToken(purchase.purchaseToken)
                 .build()
         billingClient.consumeAsync(consumeParams) { billingResult, _ ->
+            // a consumed purchase is no longer owned
+            if (billingResult.isResponseOk()) {
+                removePurchase(purchase.purchaseToken)
+            }
             invokeListener(
                 event = when {
                     billingResult.isResponseOk() -> BillingEvent.CONSUME_PURCHASE_SUCCESS
@@ -232,7 +243,7 @@ class BillingHelper(
      * Also check [purchasesQueried] and [purchasesPresentable] indicators.
      */
     fun getPurchasesWithProductName(productName: String): List<Purchase> {
-        return purchases.filter { it.products.contains(productName) }
+        return purchases.withProduct(productName)
     }
 
     /**
@@ -242,7 +253,7 @@ class BillingHelper(
      * Also check [productDetailsQueried] as indicator of query completion.
      */
     fun getProductDetails(productName: String): ProductDetails? {
-        return productDetailsList.find { it.productId == productName }
+        return productDetailsList.firstOrNull { it.productId == productName }
     }
 
     /**
@@ -299,15 +310,23 @@ class BillingHelper(
         val productDetailsForPurchase = getProductDetails(productName)
 
         if (billingClient.isReady && productDetailsForPurchase != null) {
+            // a subscription can only be bought with an offer token; building params without one throws
+            val offerToken = if (productDetailsForPurchase.isSubscription()) {
+                (subscriptionParams ?: SubscriptionPurchaseParams()).getOfferToken(productDetailsForPurchase)
+                    ?: run {
+                        invokeListener(
+                            event = BillingEvent.PURCHASE_FAILED,
+                            message = "No subscription offer of $productName matches basePlanId " +
+                                    "${subscriptionParams?.basePlanId} and offerId ${subscriptionParams?.offerId}."
+                        )
+                        return
+                    }
+            } else null
+
             val productDetailsParams = BillingFlowParams.ProductDetailsParams.newBuilder().apply {
                 setProductDetails(productDetailsForPurchase)
                 // offer token required for subscription
-                if (productDetailsForPurchase.isSubscription()) {
-                    (subscriptionParams ?: SubscriptionPurchaseParams())
-                        .getOfferToken(productDetailsForPurchase)?.let { token ->
-                            setOfferToken(token)
-                        }
-                }
+                offerToken?.let { setOfferToken(it) }
                 // subscription product replacement params (replacement mode at product level)
                 (subscriptionParams ?: SubscriptionPurchaseParams())
                     .getSubscriptionProductReplacementParams()?.let {
@@ -471,7 +490,7 @@ class BillingHelper(
      * Add a listener to [billingListeners] if not already present
      */
     fun addBillingListener(listener: BillingListener) {
-        if (!billingListeners.contains(listener)) billingListeners.add(listener)
+        billingListeners.addIfAbsent(listener)
     }
 
     /**
@@ -489,17 +508,17 @@ class BillingHelper(
         @BillingClient.OnPurchasesUpdatedSubResponseCode subResponseCode: Int? = null
     ) {
         Handler(Looper.getMainLooper()).post {
-            try {
-                if (enableLogging) {
-                    Log.d(TAG, "Listener invoked for event $event; message: \"$message\"; " +
-                            "responseCode: $responseCode")
-                }
-
-                billingListeners.forEach {
+            if (enableLogging) {
+                Log.d(TAG, "Listener invoked for event $event; message: \"$message\"; " +
+                        "responseCode: $responseCode; subResponseCode: $subResponseCode")
+            }
+            // one failing listener must not keep the event from the others
+            billingListeners.forEach {
+                try {
                     it.onBillingEvent(event, message, responseCode, subResponseCode)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Billing listener failed on event $event", e)
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
         }
     }
@@ -515,14 +534,12 @@ class BillingHelper(
 
         // handled all types
         if (currentTypeIndex == types.size) {
-            // repopulate purchases, clear first
-            this.purchases.clear()
-            for (purchase in resultingList) {
-                addOrUpdatePurchase(purchase)
-            }
+            // repopulate purchases with the ones that pass signature check
+            val ownedPurchases = resultingList.filter { isSignatureValid(it) }
+            setPurchases(ownedPurchases)
             // handle acknowledgement
             if (autoAcknowledgePurchases) {
-                acknowledgePurchases(purchases)
+                acknowledgePurchases(ownedPurchases)
             }
             // mark as queried
             this.purchasesQueried = true
@@ -567,12 +584,9 @@ class BillingHelper(
     ) {
         // handled all types
         if (currentTypeIndex == types.size) {
-            // repopulate product details list
-            this.productDetailsList.clear()
-            this.productDetailsList.addAll(productDetailsList)
-            // repopulate unfetched product list
-            this.unfetchedProductList.clear()
-            this.unfetchedProductList.addAll(unfetchedProductList)
+            // repopulate product details and unfetched product lists
+            this.productDetailsList = productDetailsList.toList()
+            this.unfetchedProductList = unfetchedProductList.toList()
             // mark as queried
             this.productDetailsQueried = true
             // invoke callback
@@ -613,26 +627,27 @@ class BillingHelper(
         }
     }
 
-    // purchases list repopulate and handle logic of acknowledge check and init
+    // add a new or updated purchase, if its signature is valid
     @Synchronized
     private fun addOrUpdatePurchase(purchase: Purchase) {
-        // take existing purchases excluding new/updated purchase and re-add it only if signature is valid
-        // the resulting list is then all existing purchases + new/updated
-        val newPurchases = this.purchases
-            .filter { it.orderId != purchase.orderId }
-            .toMutableList()
-            .also {
-                if (isSignatureValid(purchase)) {
-                    it.add(purchase)
-                    
-                    if (enableLogging) {
-                        Log.d(TAG, "Owned purchase added: ${purchase.products}")
-                    }
-                }
+        if (isSignatureValid(purchase)) {
+            purchases = purchases.withPurchase(purchase)
+            if (enableLogging) {
+                Log.d(TAG, "Owned purchase added: ${purchase.products}")
             }
+        }
+    }
 
-        this.purchases.clear()
-        this.purchases.addAll(newPurchases)
+    // replace all owned purchases
+    @Synchronized
+    private fun setPurchases(newPurchases: List<Purchase>) {
+        purchases = newPurchases.toList()
+    }
+
+    // remove a purchase, e.g. once consumed
+    @Synchronized
+    private fun removePurchase(purchaseToken: String) {
+        purchases = purchases.withoutPurchase(purchaseToken)
     }
 
     // get available types based on productInAppPurchases and productSubscriptions availability
